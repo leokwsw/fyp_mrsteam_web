@@ -10,7 +10,7 @@ class AuthRepo {
   AuthRepo(this.api);
 
   Future<LoginRes> login(String username, String password) async {
-     return await api.login(LoginReq(username, password, role: 'tutor')).then((res) {
+     return await api.login(LoginReq(username, password, role: 'staff')).then((res) {
        return res;
      });
   }

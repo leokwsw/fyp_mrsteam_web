@@ -9,7 +9,7 @@ part of 'req_login.dart';
 LoginReq _$LoginReqFromJson(Map<String, dynamic> json) => LoginReq(
   json['username'] as String,
   json['password'] as String,
-  role: json['role'] as String? ?? 'tutor',
+  role: json['role'] as String? ?? 'staff',
 );
 
 Map<String, dynamic> _$LoginReqToJson(LoginReq instance) => <String, dynamic>{

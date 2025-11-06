@@ -12,7 +12,7 @@ class LoginReq {
   LoginReq(
     this.username,
     this.password, {
-      this.role = 'tutor',
+      this.role = 'staff',
     });
 
   factory LoginReq.fromJson(Map<String, dynamic> json) => _$LoginReqFromJson(json);
