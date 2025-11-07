@@ -20,20 +20,27 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
   Future<void> _onLogin(LoginSubmitted e, Emitter<LoginState> emit) async {
     emit(state.copyWith(loading: true));
-    try {
-      LoginRes res = await getIt<AuthRepo>().login(
-        state.username,
-        state.password,
-      );
 
-      await AppPreferences.setAccessToken(res.accessToken);
-      await AppPreferences.setRefreshToken(res.refreshToken);
-      await AppPreferences.setSessionId(res.sessionId);
-      await AppPreferences.setUserId(res.user.id);
+    if (state.username.isEmpty) {
+      emit(state.copyWith(loading: false, error: "Please enter your Email"));
+    } else if (state.password.isEmpty) {
+      emit(state.copyWith(loading: false, error: "Please enter your Password"));
+    } else {
+      try {
+        LoginRes res = await getIt<AuthRepo>().login(
+          state.username,
+          state.password,
+        );
 
-      emit(state.copyWith(loading: false));
-    } catch (err) {
-      emit(state.copyWith(loading: false, error: err.toString()));
+        await AppPreferences.setAccessToken(res.accessToken);
+        await AppPreferences.setRefreshToken(res.refreshToken);
+        await AppPreferences.setSessionId(res.sessionId);
+        await AppPreferences.setUserId(res.user.id);
+
+        emit(state.copyWith(loading: false));
+      } catch (err) {
+        emit(state.copyWith(loading: false, error: err.toString()));
+      }
     }
   }
 }

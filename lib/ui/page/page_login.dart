@@ -54,108 +54,104 @@ class _LoginPageState extends State<LoginPage> {
             final bloc = context.read<LoginBloc>();
 
             return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(30.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Welcome',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 26,
-                        color: Color(0xFF1C1C1C),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 960),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 72),
+                      Text(
+                        'Welcome to TutorTrack',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Sign In to continue',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 18,
-                        color: Color(0xFF1C1C1C),
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-
-                    TextField(
-                      controller: _usernameController,
-                      onChanged: (v) => bloc.add(UsernameChanged(v)),
-                      decoration: const InputDecoration(
-                        labelText: 'Username',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextField(
-                      controller: _passwordController,
-                      onChanged: (v) => bloc.add(PasswordChanged(v)),
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                    ),
-                    const SizedBox(height: 26),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 49,
-                      child: ElevatedButton(
-                        onPressed: state.loading
-                            ? null
-                            : () => _onLoginPressed(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B62FF),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: state.loading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                      const SizedBox(height: 36),
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _usernameController,
+                                onChanged: (v) => bloc.add(UsernameChanged(v)),
+                                autofillHints: const [AutofillHints.username],
+                                decoration: const InputDecoration(
+                                  hintText: 'Email',
                                 ),
-                              )
-                            : const Text(
-                                'Login',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? 'Please enter your Email'
+                                    : null,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _passwordController,
+                                onChanged: (v) => bloc.add(PasswordChanged(v)),
+                                autofillHints: const [AutofillHints.password],
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  hintText: 'Password',
+                                ),
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? 'Please enter your Password'
+                                    : null,
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 49,
+                                child: ElevatedButton(
+                                  onPressed: state.loading
+                                      ? null
+                                      : () => _onLoginPressed(context),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF3B62FF),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: state.loading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Login',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                 ),
                               ),
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.center,
+                                child: TextButton(
+                                  onPressed: () {
+                                    // TODO: Forgot password action
+                                  },
+                                  child: const Text('Forgot Password?'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 26),
-
-                    const Text(
-                      'Forgot Password?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Color(0xFF87879D)),
-                    ),
-                    // const SizedBox(height: 10),
-                    // const Text(
-                    //   "Don't have an account? Sign Up",
-                    //   textAlign: TextAlign.center,
-                    //   style: TextStyle(
-                    //     fontFamily: 'Poppins',
-                    //     fontSize: 14,
-                    //     color: Color(0xFF87879D),
-                    //   ),
-                    // ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
