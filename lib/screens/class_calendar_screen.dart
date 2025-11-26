@@ -13,12 +13,44 @@ class ClassCalendarScreen extends StatefulWidget {
 }
 
 class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
-  DateTime selectedMonth = DateTime(2024, 9, 1); // September 2024
+  late DateTime selectedMonth;
+  late DateTime currentDateTimeHK;
   String selectedTab = 'Upcoming';
   String? selectedClassCode;
   String? selectedSchool;
   String? selectedTutor;
   String? selectedStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with current Hong Kong time (GMT+8)
+    currentDateTimeHK = _getHongKongTime();
+    selectedMonth = DateTime(currentDateTimeHK.year, currentDateTimeHK.month, 1);
+    
+    // Update time every minute
+    Future.delayed(Duration.zero, () {
+      _startTimeUpdate();
+    });
+  }
+
+  // Get current Hong Kong time (GMT+8)
+  DateTime _getHongKongTime() {
+    final now = DateTime.now().toUtc();
+    return now.add(Duration(hours: 8)); // GMT+8
+  }
+
+  // Update time every minute
+  void _startTimeUpdate() {
+    Future.delayed(Duration(minutes: 1), () {
+      if (mounted) {
+        setState(() {
+          currentDateTimeHK = _getHongKongTime();
+        });
+        _startTimeUpdate();
+      }
+    });
+  }
 
   // Sample class data with more details
   final Map<int, List<CalendarClass>> allClassEvents = {
@@ -115,6 +147,14 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     });
   }
 
+  // Go to current month
+  void _goToToday() {
+    setState(() {
+      currentDateTimeHK = _getHongKongTime();
+      selectedMonth = DateTime(currentDateTimeHK.year, currentDateTimeHK.month, 1);
+    });
+  }
+
   void _showEventDetails(CalendarClass event) {
     showDialog(
       context: context,
@@ -180,16 +220,24 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: event.color.withOpacity(0.1),
+                      color: event.status == 'Canceled'
+                          ? Color(0xFFB71C1C).withOpacity(0.1)
+                          : Color(0xFF1E3A5F).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: event.color),
+                      border: Border.all(
+                        color: event.status == 'Canceled'
+                            ? Color(0xFFB71C1C)
+                            : Color(0xFF1E3A5F),
+                      ),
                     ),
                     child: Text(
                       event.status,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: event.color,
+                        color: event.status == 'Canceled'
+                            ? Color(0xFFB71C1C)
+                            : Color(0xFF1E3A5F),
                       ),
                     ),
                   ),
@@ -201,28 +249,6 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               _buildDetailRow('Notes', event.notes),
               const SizedBox(height: 24),
               
-              // Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Close'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      // Navigate to edit screen
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: Text('Edit Class'),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -269,13 +295,49 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Page Title
-              Text(
-                'Class',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                ),
+              // Page Title with Current Time
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Class',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  // Current Hong Kong Time Display
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBackground,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatHongKongDateTime(currentDateTimeHK),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(GMT+8)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -309,7 +371,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                   Row(
                     children: [
                       Text(
-                        _getMonthName(selectedMonth.month),
+                        '${_getMonthName(selectedMonth.month)} ${selectedMonth.year}',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
@@ -319,10 +381,22 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                       IconButton(
                         icon: Icon(Icons.chevron_left),
                         onPressed: _previousMonth,
+                        tooltip: 'Previous Month',
                       ),
                       IconButton(
                         icon: Icon(Icons.chevron_right),
                         onPressed: _nextMonth,
+                        tooltip: 'Next Month',
+                      ),
+                      const SizedBox(width: 8),
+                      // Today button
+                      TextButton.icon(
+                        onPressed: _goToToday,
+                        icon: Icon(Icons.today, size: 18),
+                        label: Text('Today'),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
                       ),
                     ],
                   ),
@@ -396,6 +470,17 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         ),
       ),
     );
+  }
+
+  String _formatHongKongDateTime(DateTime dt) {
+    final days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final dayName = days[dt.weekday % 7];
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    
+    return '$dayName, $day/$month/${dt.year} $hour:$minute';
   }
 
   Widget _buildViewButton(String text, bool isCalendar) {
@@ -596,7 +681,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           days.add(_buildCalendarCell(prevDay, true, []));
         } else if (currentDay <= daysInMonth) {
           // Current month's days
-          bool isToday = currentDay == 5; // Highlighting day 5 in the design
+          // Check if this is today (comparing with Hong Kong time)
+          bool isToday = selectedMonth.year == currentDateTimeHK.year &&
+              selectedMonth.month == currentDateTimeHK.month &&
+              currentDay == currentDateTimeHK.day;
+          
           List<CalendarClass> events = filteredClassEvents[currentDay] ?? [];
           days.add(_buildCalendarCell(currentDay, false, events, isToday: isToday));
           currentDay++;
@@ -626,7 +715,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   }) {
     return Expanded(
       child: Container(
-        height: 120,
+        height: 140,
         decoration: BoxDecoration(
           color: isToday ? Color(0xFFD6E4F5) : Colors.white,
           border: Border.all(color: AppColors.cardBorder.withOpacity(0.5)),
@@ -663,31 +752,33 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               ),
             ),
 
-            // Events - ALL SAME SIZE WITH CLICK HANDLER
+            // Events - SOLID COLORED CARDS WITH SCROLL
             if (events.isNotEmpty)
               Positioned(
                 top: 36,
                 left: 4,
                 right: 4,
                 bottom: 4,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ...events.take(2).map((event) => _buildEventCard(event)),
-                    if (events.length > 2)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          '+${events.length - 2} more',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ...events.take(3).map((event) => _buildEventCard(event)),
+                      if (events.length > 3)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '+${events.length - 3} more',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -700,45 +791,42 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     return GestureDetector(
       onTap: () => _showEventDetails(event),
       child: Container(
-        height: 32, // FIXED HEIGHT FOR ALL EVENTS
-        margin: const EdgeInsets.only(bottom: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        height: 46,
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: event.color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(3),
-          border: Border(
-            left: BorderSide(color: event.color, width: 2),
-          ),
+          color: event.status == 'Canceled' 
+              ? Color(0xFFB71C1C) // Dark red for canceled
+              : Color(0xFF1E3A5F), // Dark blue for scheduled
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(
-              child: Text(
-                event.schoolName,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: event.color,
-                  height: 1.2,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+            // Class Code
+            Text(
+              event.classCode,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                height: 1.1,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-            Flexible(
-              child: Text(
-                event.time,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: event.color,
-                  height: 1.2,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 2),
+            // Time
+            Text(
+              event.time,
+              style: TextStyle(
+                fontSize: 10,
+                color: Color(0xFF90CAF9), // Light blue for time
+                height: 1.1,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
