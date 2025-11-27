@@ -39,7 +39,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Search Bar - NOW FUNCTIONAL
+              // Search Bar
               TextField(
                 controller: _searchController,
                 onChanged: (value) {
@@ -69,34 +69,34 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Filters - NOW FUNCTIONAL
+              // Filters
               Row(
                 children: [
                   _buildFilterDropdown(
                     'Tutor',
                     selectedTutor,
-                    ['Sophia Bennett', 'Ethan Carter', 'Olivia Harper', 'All'],
+                    ['All', 'Sophia Bennett', 'Ethan Carter', 'Olivia Harper'],
                     (value) => setState(() => selectedTutor = value),
                   ),
                   const SizedBox(width: 16),
                   _buildFilterDropdown(
                     'Class',
                     selectedClass,
-                    ['Mathematics 101', 'English Literature', 'Science Fundamentals', 'All'],
+                    ['All', 'Mathematics 101', 'English Literature', 'Science Fundamentals'],
                     (value) => setState(() => selectedClass = value),
                   ),
                   const SizedBox(width: 16),
                   _buildFilterDropdown(
                     'School',
                     selectedSchool,
-                    ['Northwood High', 'Southside Elementary', 'Westview Middle', 'All'],
+                    ['All', 'Northwood High', 'Southside Elementary', 'Westview Middle'],
                     (value) => setState(() => selectedSchool = value),
                   ),
                   const SizedBox(width: 16),
                   _buildFilterDropdown(
                     'Status',
                     selectedStatus,
-                    ['Present', 'Absent', 'Late', 'All'],
+                    ['All', 'Present', 'Absent', 'Late'],
                     (value) => setState(() => selectedStatus = value),
                   ),
                 ],
@@ -115,7 +115,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   height: 48,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Handle export
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Exporting attendance records...')),
                       );
@@ -203,8 +202,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Expanded(flex: 2, child: Text('School', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Scheduled Time', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Check-in Time', style: _headerStyle())),
-                Expanded(flex: 1, child: Text('Status', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Notes', style: _headerStyle())),
+                Expanded(flex: 2, child: Text('Status', style: _headerStyle())),
+                Expanded(flex: 3, child: Text('Notes', style: _headerStyle())),
               ],
             ),
           ),
@@ -252,8 +251,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           Expanded(flex: 2, child: Text(school, style: _cellStyle().copyWith(color: AppColors.textSecondary))),
           Expanded(flex: 2, child: Text(scheduled, style: _cellStyle())),
           Expanded(flex: 2, child: Text(checkIn, style: _cellStyle())),
-          Expanded(flex: 1, child: StatusBadge(text: status, type: statusType)),
-          Expanded(flex: 2, child: Text(notes, style: _cellStyle().copyWith(fontSize: 12))),
+          Expanded(flex: 2, child: StatusBadge(text: status, type: statusType)),
+          Expanded(flex: 3, child: Text(notes, style: _cellStyle().copyWith(fontSize: 12))),
         ],
       ),
     );

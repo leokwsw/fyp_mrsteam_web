@@ -797,7 +797,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         decoration: BoxDecoration(
           color: event.status == 'Canceled' 
               ? Color(0xFFB71C1C) // Dark red for canceled
-              : Color(0xFF1E3A5F), // Dark blue for scheduled
+              : Color.fromARGB(255, 37, 120, 228), // Dark blue for scheduled
           borderRadius: BorderRadius.circular(6),
         ),
         child: Column(
