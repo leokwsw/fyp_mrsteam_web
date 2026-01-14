@@ -1,9 +1,14 @@
 // lib/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:fyp_mrsteam_web/core/util/app_preferences.dart';
+import 'package:fyp_mrsteam_web/screens/attendance_screen.dart';
+import 'package:fyp_mrsteam_web/screens/auth/login_screen.dart';
+import 'package:fyp_mrsteam_web/screens/class_calendar_screen.dart';
+import 'package:fyp_mrsteam_web/screens/class_list_screen.dart';
+import 'package:fyp_mrsteam_web/screens/create_class_screen.dart';
+import 'package:fyp_mrsteam_web/screens/dashboard_screen.dart';
 import 'package:fyp_mrsteam_web/ui/page/page_home.dart';
 import 'package:fyp_mrsteam_web/ui/page/page_login.dart';
-import 'package:fyp_mrsteam_web/ui/page/page_splash.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
@@ -20,34 +25,64 @@ class AppRouter {
       initialLocation: '/',
       // refreshListenable: auth,              // auth 變化時觸發 redirect
       routes: [
+        // GoRoute(
+        //   path: '/',
+        //   name: 'splash',
+        //   builder: (context, state) => const SplashPage(),
+        // ),
         GoRoute(
           path: '/',
-          name: 'splash',
-          builder: (context, state) => const SplashPage(),
+          name: 'login',
+          builder: (context, state) => const LoginScreen(),
         ),
         GoRoute(
-          path: '/login',
-          name: 'login',
-          pageBuilder: (context, state) => CustomTransitionPage(
-            key: state.pageKey,
-            child: const LoginPage(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  final offsetTween = Tween<Offset>(
-                    begin: const Offset(0, 0.04),
-                    end: Offset.zero,
-                  ).chain(CurveTween(curve: Curves.easeOutCubic));
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: animation.drive(offsetTween),
-                      child: child,
-                    ),
-                  );
-                },
-            transitionDuration: const Duration(milliseconds: 280),
-          ),
+          path: '/',
+          name: 'dashboard',
+          builder: (context, state) => const DashboardScreen(),
         ),
+        GoRoute(
+          path: '/class',
+          name: 'class',
+          builder: (context, state) => const ClassCalendarScreen(),
+        ),
+        GoRoute(
+          path: '/class/list',
+          name: 'class list',
+          builder: (context, state) => const ClassListScreen(),
+        ),
+        GoRoute(
+          path: '/class/create',
+          name: 'create class',
+          builder: (context, state) => const CreateClassScreen(),
+        ),
+        GoRoute(
+          path: '/attendance',
+          name: 'attendance',
+          builder: (context, state) => const AttendanceScreen(),
+        ),
+        // GoRoute(
+        //   path: '/login',
+        //   name: 'login',
+        //   pageBuilder: (context, state) => CustomTransitionPage(
+        //     key: state.pageKey,
+        //     child: const LoginPage(),
+        //     transitionsBuilder:
+        //         (context, animation, secondaryAnimation, child) {
+        //           final offsetTween = Tween<Offset>(
+        //             begin: const Offset(0, 0.04),
+        //             end: Offset.zero,
+        //           ).chain(CurveTween(curve: Curves.easeOutCubic));
+        //           return FadeTransition(
+        //             opacity: animation,
+        //             child: SlideTransition(
+        //               position: animation.drive(offsetTween),
+        //               child: child,
+        //             ),
+        //           );
+        //         },
+        //     transitionDuration: const Duration(milliseconds: 280),
+        //   ),
+        // ),
         GoRoute(
           path: '/home',
           name: 'home',
@@ -75,7 +110,7 @@ class AppRouter {
       redirect: (context, state) {
         final atLogin = state.fullPath == '/login';
         final atSplash = state.fullPath == '/';
-        
+
         print(atSplash);
 
         final hasAll =
@@ -86,10 +121,10 @@ class AppRouter {
 
         if (hasAll) {
           // if (atLogin || atSplash) return '/home';
-          return '/home';
+          return '/';
         } else {
           // if (!atLogin && !atSplash) return '/login';
-          return '/login';
+          return '/';
         }
       },
     );
