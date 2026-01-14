@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 
 class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
@@ -26,10 +27,7 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(width: 12),
               Text(
                 'TutorTrack',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -40,19 +38,19 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
               _NavLink(
                 text: 'Dashboard',
                 isActive: currentRoute == '/dashboard',
-                onTap: () => Navigator.pushNamed(context, '/dashboard'),
+                onTap: () => context.go('/dashboard'),
               ),
               const SizedBox(width: 40),
               _NavLink(
                 text: 'Class',
                 isActive: currentRoute.contains('/class'),
-                onTap: () => Navigator.pushNamed(context, '/class'),
+                onTap: () => context.go('/class'),
               ),
               const SizedBox(width: 40),
               _NavLink(
                 text: 'Attendance',
                 isActive: currentRoute == '/attendance',
-                onTap: () => Navigator.pushNamed(context, '/attendance'),
+                onTap: () => context.go('/attendance'),
               ),
               const SizedBox(width: 40),
               _NavLink(
@@ -60,6 +58,7 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
                 isActive: currentRoute == '/account',
                 onTap: () {
                   // Navigate to account
+                  // context.go('/account');
                 },
               ),
               const SizedBox(width: 20),

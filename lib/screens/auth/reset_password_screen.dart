@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../constants/colors.dart';
 import '../../constants/text_styles.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
-import 'set_new_password_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({Key? key}) : super(key: key);
@@ -20,12 +20,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     print('Email: ${_emailController.text}');
     
     // Navigate to Set New Password screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SetNewPasswordScreen(),
-      ),
-    );
+    context.push('/set-new-password');
   }
 
   @override
@@ -43,7 +38,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => context.pop(),
                     ),
                     Icon(Icons.school, size: 28),
                     const SizedBox(width: 8),
@@ -103,7 +98,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                         // Back to Login Link
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => context.pop(),
                           child: Text(
                             'Back to Login',
                             style: AppTextStyles.link,

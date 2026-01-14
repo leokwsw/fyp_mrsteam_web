@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:fyp_mrsteam_web/core/util/app_preferences.dart';
 import 'package:fyp_mrsteam_web/screens/attendance_screen.dart';
 import 'package:fyp_mrsteam_web/screens/auth/login_screen.dart';
+import 'package:fyp_mrsteam_web/screens/auth/reset_password_screen.dart';
+import 'package:fyp_mrsteam_web/screens/auth/set_new_password_screen.dart';
 import 'package:fyp_mrsteam_web/screens/class_calendar_screen.dart';
 import 'package:fyp_mrsteam_web/screens/class_list_screen.dart';
 import 'package:fyp_mrsteam_web/screens/create_class_screen.dart';
 import 'package:fyp_mrsteam_web/screens/dashboard_screen.dart';
 import 'package:fyp_mrsteam_web/ui/page/page_home.dart';
-import 'package:fyp_mrsteam_web/ui/page/page_login.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
@@ -36,9 +37,19 @@ class AppRouter {
           builder: (context, state) => const LoginScreen(),
         ),
         GoRoute(
-          path: '/',
+          path: '/dashboard',
           name: 'dashboard',
           builder: (context, state) => const DashboardScreen(),
+        ),
+        GoRoute(
+          path: '/reset-password',
+          name: 'reset-password',
+          builder: (context, state) => const ResetPasswordScreen(),
+        ),
+        GoRoute(
+          path: '/set-new-password',
+          name: 'set-new-password',
+          builder: (context, state) => const SetNewPasswordScreen(),
         ),
         GoRoute(
           path: '/class',
@@ -47,12 +58,12 @@ class AppRouter {
         ),
         GoRoute(
           path: '/class/list',
-          name: 'class list',
+          name: 'class-list',
           builder: (context, state) => const ClassListScreen(),
         ),
         GoRoute(
           path: '/class/create',
-          name: 'create class',
+          name: 'class-create',
           builder: (context, state) => const CreateClassScreen(),
         ),
         GoRoute(
@@ -103,30 +114,27 @@ class AppRouter {
                     ),
                   );
                 },
-            transitionDuration: const Duration(milliseconds: 300),
+            // transitionDuration: const Duration(milliseconds: 300),
           ),
         ),
       ],
-      redirect: (context, state) {
-        final atLogin = state.fullPath == '/login';
-        final atSplash = state.fullPath == '/';
+      // redirect: (context, state) {
+      //   final atSplash = state.fullPath == '/';
 
-        print(atSplash);
+      //   // print(atSplash);
 
-        final hasAll =
-            AppPreferences.getAccessToken().isNotEmpty &&
-            AppPreferences.getRefreshToken().isNotEmpty &&
-            AppPreferences.getSessionId().isNotEmpty &&
-            AppPreferences.getUserId().isNotEmpty;
+      //   final hasAll =
+      //       AppPreferences.getAccessToken().isNotEmpty &&
+      //       AppPreferences.getRefreshToken().isNotEmpty &&
+      //       AppPreferences.getSessionId().isNotEmpty &&
+      //       AppPreferences.getUserId().isNotEmpty;
 
-        if (hasAll) {
-          // if (atLogin || atSplash) return '/home';
-          return '/';
-        } else {
-          // if (!atLogin && !atSplash) return '/login';
-          return '/';
-        }
-      },
+      //   if (hasAll) {
+      //     return '/';
+      //   } else {
+      //     return '/';
+      //   }
+      // },
     );
   }
 }

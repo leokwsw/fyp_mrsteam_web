@@ -11,7 +11,6 @@ class MainAppWidget extends StatefulWidget {
 }
 
 class _MainAppWidgetState extends State<MainAppWidget> {
-
   @override
   void initState() {
     super.initState();
@@ -21,7 +20,20 @@ class _MainAppWidgetState extends State<MainAppWidget> {
   @override
   Widget build(BuildContext context) {
     final router = getIt<AppRouter>().router;
-    return MaterialApp.router(routerConfig: router,);
+    return MaterialApp.router(
+      routerConfig: router,
+      theme: ThemeData(
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: NoTransitionPageTransitionsBuilder(),
+            TargetPlatform.iOS: NoTransitionPageTransitionsBuilder(),
+            TargetPlatform.linux: NoTransitionPageTransitionsBuilder(),
+            TargetPlatform.macOS: NoTransitionPageTransitionsBuilder(),
+            TargetPlatform.windows: NoTransitionPageTransitionsBuilder(),
+          },
+        ),
+      ),
+    );
 
     // return MaterialApp(
     //   title: 'Flutter Demo',
@@ -48,3 +60,17 @@ class _MainAppWidgetState extends State<MainAppWidget> {
   }
 }
 
+class NoTransitionPageTransitionsBuilder extends PageTransitionsBuilder {
+  const NoTransitionPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
+  }
+}

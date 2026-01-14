@@ -21,7 +21,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       CommonMessage res = await getIt<AuthRepo>().logout(sessionId);
 
       if (kDebugMode) {
-        print(res);
+        // print(res);
       }
 
       await AppPreferences.clear();
