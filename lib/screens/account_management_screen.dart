@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/custom_button.dart';
-import 'add_new_user_screen.dart';
-import 'user_profile_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
   const AccountManagementScreen({Key? key}) : super(key: key);
@@ -54,10 +53,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     child: CustomButton(
                       text: 'New User',
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => AddNewUserScreen()),
-                        );
+                        context.go('/account/new');
                       },
                     ),
                   ),
@@ -211,12 +207,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Widget _buildUserRow(Map<String, dynamic> user) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UserProfileScreen(userId: user['userId']),
-          ),
-        );
+        context.go('/account/user/${user['userId']}');
       },
       child: Container(
         padding: const EdgeInsets.all(16),
