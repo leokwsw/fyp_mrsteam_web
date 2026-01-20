@@ -57,16 +57,17 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(width: 40),
               _NavLink(
                 text: 'Account',
-                isActive: currentRoute == '/account',
-                onTap: () {
-                  // Navigate to account
-                },
+                isActive: currentRoute.contains('/account'),
+                onTap: () => Navigator.pushNamed(context, '/account'),
               ),
               const SizedBox(width: 20),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.primary,
-                child: Icon(Icons.person, color: Colors.white),
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/myprofile'),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.primary,
+                  child: Icon(Icons.person, color: Colors.white),
+                ),
               ),
             ],
           ),
