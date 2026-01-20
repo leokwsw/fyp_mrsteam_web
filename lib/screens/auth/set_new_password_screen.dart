@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../constants/colors.dart';
 import '../../constants/text_styles.dart';
 import '../../widgets/custom_text_field.dart';
@@ -27,7 +28,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     print('New Password: ${_newPasswordController.text}');
     
     // Navigate back to login after successful password reset
-    Navigator.popUntil(context, (route) => route.isFirst);
+    context.go('/');
   }
 
   @override

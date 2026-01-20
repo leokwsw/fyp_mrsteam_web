@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/custom_button.dart';
-import 'create_class_screen.dart';
-import 'class_calendar_screen.dart';
 
 class ClassListScreen extends StatefulWidget {
   const ClassListScreen({Key? key}) : super(key: key);
@@ -135,18 +134,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
                     child: CustomButton(
                       text: 'New Class',
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                                CreateClassScreen(),
-                            transitionsBuilder:
-                                (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(opacity: animation, child: child);
-                            },
-                            transitionDuration: Duration(milliseconds: 200),
-                          ),
-                        );
+                        context.push('/class/create');
                       },
                     ),
                   ),
@@ -168,18 +156,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
     return GestureDetector(
       onTap: () {
         if (isCalendar) {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  ClassCalendarScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              transitionDuration: Duration(milliseconds: 200),
-            ),
-          );
+          context.go('/class');
         }
       },
       child: Container(

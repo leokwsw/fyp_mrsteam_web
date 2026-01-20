@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_button.dart';
-import 'create_class_screen.dart';
-import 'class_list_screen.dart';
 
 class ClassCalendarScreen extends StatefulWidget {
   const ClassCalendarScreen({Key? key}) : super(key: key);
@@ -26,8 +25,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     super.initState();
     // Initialize with current Hong Kong time (GMT+8)
     currentDateTimeHK = _getHongKongTime();
-    selectedMonth = DateTime(currentDateTimeHK.year, currentDateTimeHK.month, 1);
-    
+    selectedMonth = DateTime(
+      currentDateTimeHK.year,
+      currentDateTimeHK.month,
+      1,
+    );
+
     // Update time every minute
     Future.delayed(Duration.zero, () {
       _startTimeUpdate();
@@ -105,33 +108,40 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   // Get filtered events based on selected filters
   Map<int, List<CalendarClass>> get filteredClassEvents {
     Map<int, List<CalendarClass>> filtered = {};
-    
+
     allClassEvents.forEach((day, events) {
       List<CalendarClass> filteredEvents = events.where((event) {
-        bool matchesClassCode = selectedClassCode == null || 
-            selectedClassCode == 'All' || 
+        bool matchesClassCode =
+            selectedClassCode == null ||
+            selectedClassCode == 'All' ||
             event.classCode == selectedClassCode;
-        
-        bool matchesSchool = selectedSchool == null || 
-            selectedSchool == 'All' || 
+
+        bool matchesSchool =
+            selectedSchool == null ||
+            selectedSchool == 'All' ||
             event.schoolName.contains(selectedSchool!);
-        
-        bool matchesTutor = selectedTutor == null || 
-            selectedTutor == 'All' || 
+
+        bool matchesTutor =
+            selectedTutor == null ||
+            selectedTutor == 'All' ||
             event.tutor == selectedTutor;
-        
-        bool matchesStatus = selectedStatus == null || 
-            selectedStatus == 'All' || 
+
+        bool matchesStatus =
+            selectedStatus == null ||
+            selectedStatus == 'All' ||
             event.status == selectedStatus;
-        
-        return matchesClassCode && matchesSchool && matchesTutor && matchesStatus;
+
+        return matchesClassCode &&
+            matchesSchool &&
+            matchesTutor &&
+            matchesStatus;
       }).toList();
-      
+
       if (filteredEvents.isNotEmpty) {
         filtered[day] = filteredEvents;
       }
     });
-    
+
     return filtered;
   }
 
@@ -151,7 +161,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   void _goToToday() {
     setState(() {
       currentDateTimeHK = _getHongKongTime();
-      selectedMonth = DateTime(currentDateTimeHK.year, currentDateTimeHK.month, 1);
+      selectedMonth = DateTime(
+        currentDateTimeHK.year,
+        currentDateTimeHK.month,
+        1,
+      );
     });
   }
 
@@ -173,39 +187,36 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                 children: [
                   Text(
                     'Class Details',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
                   ),
                   IconButton(
                     icon: Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               // Class Code
               _buildDetailRow('Class Code', event.classCode),
               const SizedBox(height: 16),
-              
+
               // School
               _buildDetailRow('School', event.schoolName),
               const SizedBox(height: 16),
-              
+
               // Time
               _buildDetailRow('Time', event.time),
               const SizedBox(height: 16),
-              
+
               // Tutor
               _buildDetailRow('Tutor', event.tutor),
               const SizedBox(height: 16),
-              
+
               // Location
               _buildDetailRow('Location', event.location),
               const SizedBox(height: 16),
-              
+
               // Status
               Row(
                 children: [
@@ -244,11 +255,10 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Notes
               _buildDetailRow('Notes', event.notes),
               const SizedBox(height: 24),
-              
             ],
           ),
         ),
@@ -274,10 +284,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         Expanded(
           child: Text(
             value,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textPrimary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
           ),
         ),
       ],
@@ -301,10 +308,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                 children: [
                   Text(
                     'Class',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.w600),
                   ),
                   // Current Hong Kong Time Display
                   Container(
@@ -316,7 +320,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.access_time, size: 18, color: AppColors.textSecondary),
+                        Icon(
+                          Icons.access_time,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           _formatHongKongDateTime(currentDateTimeHK),
@@ -395,7 +403,10 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                         icon: Icon(Icons.today, size: 18),
                         label: Text('Today'),
                         style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                       ),
                     ],
@@ -420,14 +431,24 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                       _buildFilterDropdown(
                         'School',
                         selectedSchool,
-                        ['All', 'Northwood High', 'Oakridge Academy', 'Riverside Prep'],
+                        [
+                          'All',
+                          'Northwood High',
+                          'Oakridge Academy',
+                          'Riverside Prep',
+                        ],
                         (value) => setState(() => selectedSchool = value),
                       ),
                       const SizedBox(width: 16),
                       _buildFilterDropdown(
                         'Tutor',
                         selectedTutor,
-                        ['All', 'Dr. Harper', 'Dr. Carter', 'Dr. Sarah Johnson'],
+                        [
+                          'All',
+                          'Dr. Harper',
+                          'Dr. Carter',
+                          'Dr. Sarah Johnson',
+                        ],
                         (value) => setState(() => selectedTutor = value),
                       ),
                       const SizedBox(width: 16),
@@ -444,18 +465,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                     child: CustomButton(
                       text: 'New Class',
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                                CreateClassScreen(),
-                            transitionsBuilder:
-                                (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(opacity: animation, child: child);
-                            },
-                            transitionDuration: Duration(milliseconds: 200),
-                          ),
-                        );
+                        context.push('/class/create');
                       },
                     ),
                   ),
@@ -479,7 +489,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     final minute = dt.minute.toString().padLeft(2, '0');
     final day = dt.day.toString().padLeft(2, '0');
     final month = dt.month.toString().padLeft(2, '0');
-    
+
     return '$dayName, $day/$month/${dt.year} $hour:$minute';
   }
 
@@ -488,18 +498,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     return GestureDetector(
       onTap: () {
         if (!isCalendar) {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  ClassListScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              transitionDuration: Duration(milliseconds: 200),
-            ),
-          );
+          context.go('/class/list');
         }
       },
       child: Container(
@@ -576,10 +575,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           ),
           icon: Container(),
           items: items
-              .map((item) => DropdownMenuItem(
-                    value: item,
-                    child: Text(item, style: TextStyle(fontSize: 14)),
-                  ))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(item, style: TextStyle(fontSize: 14)),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
@@ -589,13 +590,25 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
   Widget _buildCalendar() {
     // Get first day of month and number of days
-    final firstDayOfMonth = DateTime(selectedMonth.year, selectedMonth.month, 1);
-    final lastDayOfMonth = DateTime(selectedMonth.year, selectedMonth.month + 1, 0);
+    final firstDayOfMonth = DateTime(
+      selectedMonth.year,
+      selectedMonth.month,
+      1,
+    );
+    final lastDayOfMonth = DateTime(
+      selectedMonth.year,
+      selectedMonth.month + 1,
+      0,
+    );
     final daysInMonth = lastDayOfMonth.day;
     final startWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday
 
     // Get previous month's last days to fill the grid
-    final prevMonthLastDay = DateTime(selectedMonth.year, selectedMonth.month, 0).day;
+    final prevMonthLastDay = DateTime(
+      selectedMonth.year,
+      selectedMonth.month,
+      0,
+    ).day;
     final prevMonthDaysToShow = startWeekday;
 
     return Container(
@@ -610,9 +623,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: AppColors.cardBorder),
-              ),
+              border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
             ),
             child: Row(
               children: [
@@ -682,12 +693,15 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         } else if (currentDay <= daysInMonth) {
           // Current month's days
           // Check if this is today (comparing with Hong Kong time)
-          bool isToday = selectedMonth.year == currentDateTimeHK.year &&
+          bool isToday =
+              selectedMonth.year == currentDateTimeHK.year &&
               selectedMonth.month == currentDateTimeHK.month &&
               currentDay == currentDateTimeHK.day;
-          
+
           List<CalendarClass> events = filteredClassEvents[currentDay] ?? [];
-          days.add(_buildCalendarCell(currentDay, false, events, isToday: isToday));
+          days.add(
+            _buildCalendarCell(currentDay, false, events, isToday: isToday),
+          );
           currentDay++;
         } else {
           // Next month's days
@@ -697,10 +711,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
       }
 
       weeks.add(
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: days,
-        ),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: days),
       );
     }
 
@@ -744,8 +755,8 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                       color: isToday
                           ? Colors.white
                           : isOtherMonth
-                              ? AppColors.textSecondary.withOpacity(0.4)
-                              : AppColors.textSecondary,
+                          ? AppColors.textSecondary.withOpacity(0.4)
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -795,7 +806,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: event.status == 'Canceled' 
+          color: event.status == 'Canceled'
               ? Color(0xFFB71C1C) // Dark red for canceled
               : Color.fromARGB(255, 37, 120, 228), // Dark blue for scheduled
           borderRadius: BorderRadius.circular(6),
@@ -847,7 +858,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
       'September',
       'October',
       'November',
-      'December'
+      'December',
     ];
     return months[month - 1];
   }

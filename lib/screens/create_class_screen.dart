@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_text_field.dart';
@@ -194,7 +195,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       SizedBox(
                         width: 120,
                         child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => context.pop(),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.textPrimary,
@@ -212,7 +213,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           text: 'Save',
                           onPressed: () {
                             // Handle save
-                            Navigator.pop(context);
+                            context.pop();
                           },
                         ),
                       ),

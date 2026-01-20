@@ -40,9 +40,13 @@ dependencies:
   # HTTP networking package
   # https://pub.dev/packages/dio
 
-  json_serializable: 6.11.1
-  # JSON serializable package
-  # https://pub.dev/packages/json_serializable
+  retry: 3.1.2
+  # Retry package
+  # https://pub.dev/packages/retry
+
+  json_annotation: 4.9.0
+  # JSON annotation package
+  # https://pub.dev/packages/json_annotation
 
   intl: 0.20.2
   # Internationalization package
@@ -52,13 +56,25 @@ dependencies:
   # Firebase core package
   # https://pub.dev/packages/firebase_core
 
+  firebase_messaging: 16.0.2
+  # Firebase messaging package
+  # https://pub.dev/packages/firebase_messaging
+
   firebase_crashlytics: 5.0.2
   # Firebase crashlytics package
   # https://pub.dev/packages/firebase_crashlytics
 
+  get_it: 8.2.0
+  # simple service Locator
+  # https://pub.dev/packages/get_it
+
   path: 1.9.1
   # Path package
   # https://pub.dev/packages/path
+
+  path_provider: 2.1.5
+  # Path provider package
+  # https://pub.dev/packages/path_provider
 
   bloc: 9.0.0
   # Bloc package
@@ -76,13 +92,41 @@ dependencies:
   # Bloc test package
   # https://pub.dev/packages/bloc_test
 
+  image_picker: 1.2.0
+  # Image picker package
+  # https://pub.dev/packages/image_picker
+
   cached_network_image: 3.4.1
   # Cached network image package
   # https://pub.dev/packages/cached_network_image
 
+  permission_handler: 12.0.1
+  # Permission handler package
+  # https://pub.dev/packages/permission_handler
+
+  device_info_plus: 12.1.0
+  # Device info plus package
+  # https://pub.dev/packages/device_info_plus
+
+  package_info_plus: 9.0.0
+  # Package info plus package
+  # https://pub.dev/packages/package_info_plus
+
+  connectivity_plus: 7.0.0
+  # Connectivity plus package
+  # https://pub.dev/packages/connectivity_plus
+
+  geolocator: ^14.0.1
+  # Geolocator package
+  # https://pub.dev/packages/geolocator
+
   go_router: 16.2.2
   # Go router package
   # https://pub.dev/packages/go_router
+
+  app_links: 6.4.1
+  # App links package
+  # https://pub.dev/packages/app_links
 
   talker: 5.0.1
   # Talker package
@@ -108,9 +152,16 @@ dependencies:
   # Google fonts package
   # https://pub.dev/packages/google_fonts
 
+  shared_preferences: 2.5.3
+  # native SharedPreferences/UserDefaults helper
+  # https://pub.dev/packages/shared_preferences
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  build_runner: 2.7.1
+  json_serializable: 6.11.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
