@@ -6,12 +6,13 @@ part 'res_common_message.g.dart';
 class CommonMessage {
   final String message;
 
-  CommonMessage(
-      this.message
-      );
+  CommonMessage(this.message);
 
-  factory CommonMessage.fromJson(Map<String, dynamic> json) => _$CommonMessageFromJson(json);
+  factory CommonMessage.fromJson(Map<String, dynamic> json) =>
+      _$CommonMessageFromJson(json);
+
   Map<String, dynamic> toJson() => _$CommonMessageToJson(this);
 
-  static fromJsonModel(Map<String, dynamic> json) => CommonMessage.fromJson(json);
+  static fromJsonModel(Map<String, dynamic> json) =>
+      CommonMessage.fromJson(json);
 }

@@ -1,0 +1,4409 @@
+{
+  "swaggerDoc": {
+    "openapi": "3.0.0",
+    "paths": {
+      "/api/v1/auth/login": {
+        "post": {
+          "operationId": "AuthController_login",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Login Success"
+            },
+            "401": {
+              "description": "Login Failed"
+            }
+          },
+          "summary": "Tutor/Staff Login",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/logout": {
+        "post": {
+          "operationId": "AuthController_logout",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Logout Success"
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Tutor/Staff Logout",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/refresh": {
+        "post": {
+          "operationId": "AuthController_getRefreshToken",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshTokenDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Token 刷新成功"
+            },
+            "401": {
+              "description": "Refresh Token 無效"
+            }
+          },
+          "summary": "刷新 Access Token",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/validate": {
+        "get": {
+          "operationId": "AuthController_validate",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "Token 有效"
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "驗證 Token",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/change-password": {
+        "post": {
+          "operationId": "AuthController_changePassword",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePasswordDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password changed successfully"
+            },
+            "400": {
+              "description": "Invalid password"
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Change Password (First Login)",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/users": {
+        "post": {
+          "operationId": "UsersController_createUser",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        },
+        "get": {
+          "operationId": "UsersController_getUsers",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "search",
+              "required": false,
+              "in": "query",
+              "description": "Keyword (name/email/username)",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "role",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "tutor",
+                  "staff"
+                ]
+              }
+            },
+            {
+              "name": "isActive",
+              "required": false,
+              "in": "query",
+              "description": "active",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "true",
+                  "false"
+                ]
+              }
+            },
+            {
+              "name": "sortBy",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "example": "createdAt",
+                "type": "string"
+              }
+            },
+            {
+              "name": "sortOrder",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "example": "asc",
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UsersListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        }
+      },
+      "/api/v1/profile": {
+        "get": {
+          "operationId": "UsersController_getUserProfile",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        }
+      },
+      "/api/v1/user/{id}": {
+        "get": {
+          "operationId": "UsersController_getUser",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        },
+        "patch": {
+          "operationId": "UsersController_editUserById",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        },
+        "delete": {
+          "operationId": "UsersController_deleteUser",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Delete User By Id",
+          "tags": [
+            "Users"
+          ]
+        }
+      },
+      "/api/v1/user": {
+        "patch": {
+          "operationId": "UsersController_editUserFromUser",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        }
+      },
+      "/api/v1/{id}/active": {
+        "put": {
+          "operationId": "UsersController_updateUserActiveStatis",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveUserDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "tags": [
+            "Users"
+          ]
+        }
+      },
+      "/api/v1/user/{id}/reset-password": {
+        "post": {
+          "operationId": "UsersController_resetPassword",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/MessageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Reset Tutor Password (Staff Only)",
+          "tags": [
+            "Users"
+          ]
+        }
+      },
+      "/api/v1/files/upload": {
+        "post": {
+          "operationId": "FilesController_uploadFile",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "file"
+                  ],
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "上傳檔案（鍵名 file）"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/FileUploadResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Upload File",
+          "tags": [
+            "Files"
+          ]
+        }
+      },
+      "/api/v1/files/download/{path}": {
+        "get": {
+          "operationId": "FilesController_downloadFile",
+          "parameters": [
+            {
+              "name": "0",
+              "required": true,
+              "in": "path",
+              "description": "文件路徑（例如：users/userId/filename）",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BinaryFileResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Download File",
+          "tags": [
+            "Files"
+          ]
+        }
+      },
+      "/api/v1/files/signed-url/{path}": {
+        "get": {
+          "operationId": "FilesController_getSignedUrl",
+          "parameters": [
+            {
+              "name": "0",
+              "required": true,
+              "in": "path",
+              "description": "文件路徑（例如：users/userId/filename）",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SignedUrlResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Signed URL for File Download",
+          "tags": [
+            "Files"
+          ]
+        }
+      },
+      "/api/v1/files/{path}": {
+        "delete": {
+          "operationId": "FilesController_deleteFile",
+          "parameters": [
+            {
+              "name": "0",
+              "required": true,
+              "in": "path",
+              "description": "文件路徑（例如：users/userId/filename）",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/MessageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Delete File",
+          "tags": [
+            "Files"
+          ]
+        }
+      },
+      "/api/v1/system/metrics": {
+        "get": {
+          "operationId": "SystemController_getMetrics",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "性能指標"
+            }
+          },
+          "summary": "系統性能指標",
+          "tags": [
+            "System"
+          ]
+        }
+      },
+      "/api/v1/system/logs": {
+        "get": {
+          "operationId": "SystemController_getLogs",
+          "parameters": [
+            {
+              "name": "endDate",
+              "required": false,
+              "in": "query",
+              "description": "結束日期",
+              "schema": {}
+            },
+            {
+              "name": "startDate",
+              "required": false,
+              "in": "query",
+              "description": "開始日期",
+              "schema": {}
+            },
+            {
+              "name": "path",
+              "required": false,
+              "in": "query",
+              "description": "路徑",
+              "schema": {}
+            },
+            {
+              "name": "statusCode",
+              "required": false,
+              "in": "query",
+              "description": "狀態碼",
+              "schema": {}
+            },
+            {
+              "name": "method",
+              "required": false,
+              "in": "query",
+              "description": "HTTP方法",
+              "schema": {}
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "description": "每頁數量",
+              "schema": {
+                "example": 50
+              }
+            },
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "description": "頁數",
+              "schema": {
+                "example": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "日誌列表"
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "獲取系統日誌",
+          "tags": [
+            "System"
+          ]
+        }
+      },
+      "/api/v1/system/stats": {
+        "get": {
+          "operationId": "SystemController_getStats",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "統計數據"
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "獲取系統統計數據",
+          "tags": [
+            "System"
+          ]
+        }
+      },
+      "/api/v1/health": {
+        "get": {
+          "operationId": "HealthController_check",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "The Health Check is successful",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "example": "ok"
+                      },
+                      "info": {
+                        "type": "object",
+                        "example": {
+                          "database": {
+                            "status": "up"
+                          }
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "required": [
+                            "status"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        },
+                        "nullable": true
+                      },
+                      "error": {
+                        "type": "object",
+                        "example": {},
+                        "additionalProperties": {
+                          "type": "object",
+                          "required": [
+                            "status"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        },
+                        "nullable": true
+                      },
+                      "details": {
+                        "type": "object",
+                        "example": {
+                          "database": {
+                            "status": "up"
+                          }
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "required": [
+                            "status"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "503": {
+              "description": "The Health Check is not successful",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "example": "error"
+                      },
+                      "info": {
+                        "type": "object",
+                        "example": {
+                          "database": {
+                            "status": "up"
+                          }
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "required": [
+                            "status"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        },
+                        "nullable": true
+                      },
+                      "error": {
+                        "type": "object",
+                        "example": {
+                          "redis": {
+                            "status": "down",
+                            "message": "Could not connect"
+                          }
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "required": [
+                            "status"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        },
+                        "nullable": true
+                      },
+                      "details": {
+                        "type": "object",
+                        "example": {
+                          "database": {
+                            "status": "up"
+                          },
+                          "redis": {
+                            "status": "down",
+                            "message": "Could not connect"
+                          }
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "required": [
+                            "status"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "tags": [
+            "Health"
+          ]
+        }
+      },
+      "/api/v1/school": {
+        "post": {
+          "operationId": "SchoolController_createSchool",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSchoolDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SchoolResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Create School",
+          "tags": [
+            "School"
+          ]
+        },
+        "get": {
+          "operationId": "SchoolController_getSchools",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "search",
+              "required": false,
+              "in": "query",
+              "description": "Search by school name",
+              "schema": {
+                "example": "Primary School",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SchoolListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Schools",
+          "tags": [
+            "School"
+          ]
+        }
+      },
+      "/api/v1/school/{id}": {
+        "get": {
+          "operationId": "SchoolController_getSchoolById",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SchoolResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get School By Id",
+          "tags": [
+            "School"
+          ]
+        },
+        "patch": {
+          "operationId": "SchoolController_updateSchool",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSchoolDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SchoolResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Update School By Id",
+          "tags": [
+            "School"
+          ]
+        },
+        "delete": {
+          "operationId": "SchoolController_deleteSchool",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Delete School By Id",
+          "tags": [
+            "School"
+          ]
+        }
+      },
+      "/api/v1/course": {
+        "post": {
+          "operationId": "CourseController_create",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCourseDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Create Course",
+          "tags": [
+            "Course"
+          ]
+        },
+        "get": {
+          "operationId": "CourseController_getCourses",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "search",
+              "required": false,
+              "in": "query",
+              "description": "Search by course name",
+              "schema": {
+                "example": "Math",
+                "type": "string"
+              }
+            },
+            {
+              "name": "tutorId",
+              "required": false,
+              "in": "query",
+              "description": "Filter by tutor ID",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            },
+            {
+              "name": "schoolId",
+              "required": false,
+              "in": "query",
+              "description": "Filter by school ID",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Courses",
+          "tags": [
+            "Course"
+          ]
+        }
+      },
+      "/api/v1/course/{id}": {
+        "get": {
+          "operationId": "CourseController_getCourse",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Course By Id",
+          "tags": [
+            "Course"
+          ]
+        },
+        "patch": {
+          "operationId": "CourseController_editCourse",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateCourseDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Edit Course By Id",
+          "tags": [
+            "Course"
+          ]
+        }
+      },
+      "/api/v1/course/{id}/status": {
+        "patch": {
+          "operationId": "CourseController_enableCourse",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Enable Course By Id",
+          "tags": [
+            "Course"
+          ]
+        },
+        "delete": {
+          "operationId": "CourseController_disableCourse",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Disable Course By Id",
+          "tags": [
+            "Course"
+          ]
+        }
+      },
+      "/api/v1/course/{id}/files": {
+        "get": {
+          "operationId": "CourseController_getCourseFiles",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "description": "Course ID",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseFilesResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Course Teaching Materials",
+          "tags": [
+            "Course"
+          ]
+        }
+      },
+      "/api/v1/course/{id}/files/{fileIndex}/download": {
+        "get": {
+          "operationId": "CourseController_downloadCourseFile",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "description": "Course ID",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "fileIndex",
+              "required": true,
+              "in": "path",
+              "description": "File index in the course files array (0-based)",
+              "schema": {
+                "type": "number"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BinaryFileResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Download Course Teaching Material",
+          "tags": [
+            "Course"
+          ]
+        }
+      },
+      "/api/v1/course/{id}/files/{fileIndex}/signed-url": {
+        "get": {
+          "operationId": "CourseController_getCourseFileSignedUrl",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "description": "Course ID",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "fileIndex",
+              "required": true,
+              "in": "path",
+              "description": "File index in the course files array (0-based)",
+              "schema": {
+                "type": "number"
+              }
+            },
+            {
+              "name": "expiresIn",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "number"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SignedUrlResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Signed URL for Course Teaching Material",
+          "tags": [
+            "Course"
+          ]
+        }
+      },
+      "/api/v1/attendance": {
+        "get": {
+          "operationId": "AttendanceController_getAttendances",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "courseId",
+              "required": false,
+              "in": "query",
+              "description": "Course ID filter",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            },
+            {
+              "name": "tutorId",
+              "required": false,
+              "in": "query",
+              "description": "Tutor ID filter",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            },
+            {
+              "name": "schoolId",
+              "required": false,
+              "in": "query",
+              "description": "School ID filter",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            },
+            {
+              "name": "startDate",
+              "required": false,
+              "in": "query",
+              "description": "Start date filter",
+              "schema": {
+                "example": "2024-01-01",
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": false,
+              "in": "query",
+              "description": "End date filter",
+              "schema": {
+                "example": "2024-12-31",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AttendanceListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Attendances",
+          "tags": [
+            "Attendance"
+          ]
+        },
+        "post": {
+          "operationId": "AttendanceController_checkIn",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "lat",
+                    "long"
+                  ],
+                  "properties": {
+                    "courseId": {
+                      "type": "string",
+                      "description": "Course ID (optional)",
+                      "example": "507f1f77bcf86cd799439011"
+                    },
+                    "lat": {
+                      "type": "number",
+                      "description": "GPS Latitude",
+                      "example": 22.222222
+                    },
+                    "long": {
+                      "type": "number",
+                      "description": "GPS Longitude",
+                      "example": 114.111111
+                    },
+                    "photo": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "Attendance photo (optional)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Check In with GPS and Photo",
+          "tags": [
+            "Attendance"
+          ]
+        }
+      },
+      "/api/v1/attendance/{id}": {
+        "get": {
+          "operationId": "AttendanceController_getAttendanceById",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AttendanceResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Attendance By Id",
+          "tags": [
+            "Attendance"
+          ]
+        }
+      },
+      "/api/v1/attendance/export": {
+        "get": {
+          "operationId": "AttendanceController_exportAttendances",
+          "parameters": [
+            {
+              "name": "courseId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "tutorId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "schoolId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "startDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "format",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BinaryFileResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Export Attendance Records",
+          "tags": [
+            "Attendance"
+          ]
+        }
+      },
+      "/api/v1/leave": {
+        "post": {
+          "operationId": "LeaveController_createLeave",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLeaveDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LeaveResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Create Leave Application",
+          "tags": [
+            "Leave"
+          ]
+        },
+        "get": {
+          "operationId": "LeaveController_getLeaves",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "description": "Page number",
+              "schema": {
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "description": "Items per page",
+              "schema": {
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "tutorId",
+              "required": false,
+              "in": "query",
+              "description": "Tutor ID filter",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            },
+            {
+              "name": "status",
+              "required": false,
+              "in": "query",
+              "description": "Status filter",
+              "schema": {
+                "example": "pending",
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "approved",
+                  "rejected"
+                ]
+              }
+            },
+            {
+              "name": "startDate",
+              "required": false,
+              "in": "query",
+              "description": "Start date filter (from)",
+              "schema": {
+                "example": "2024-01-01T00:00:00.000Z",
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": false,
+              "in": "query",
+              "description": "End date filter (to)",
+              "schema": {
+                "example": "2024-12-31T23:59:59.999Z",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LeaveListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Leave Applications",
+          "tags": [
+            "Leave"
+          ]
+        }
+      },
+      "/api/v1/leave/{id}": {
+        "get": {
+          "operationId": "LeaveController_getLeaveById",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LeaveResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Leave Application By Id",
+          "tags": [
+            "Leave"
+          ]
+        },
+        "patch": {
+          "operationId": "LeaveController_updateLeave",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateLeaveDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LeaveResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Update Leave Application",
+          "tags": [
+            "Leave"
+          ]
+        },
+        "delete": {
+          "operationId": "LeaveController_deleteLeave",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Delete Leave Application",
+          "tags": [
+            "Leave"
+          ]
+        }
+      },
+      "/api/v1/leave/{id}/approve": {
+        "patch": {
+          "operationId": "LeaveController_approveLeave",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveLeaveDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LeaveResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Approve or Reject Leave Application",
+          "tags": [
+            "Leave"
+          ]
+        }
+      },
+      "/api/v1/leave/export": {
+        "get": {
+          "operationId": "LeaveController_exportLeaves",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "description": "Page number",
+              "schema": {
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "description": "Items per page",
+              "schema": {
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "tutorId",
+              "required": false,
+              "in": "query",
+              "description": "Tutor ID filter",
+              "schema": {
+                "example": "507f1f77bcf86cd799439011",
+                "type": "string"
+              }
+            },
+            {
+              "name": "status",
+              "required": false,
+              "in": "query",
+              "description": "Status filter",
+              "schema": {
+                "example": "pending",
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "approved",
+                  "rejected"
+                ]
+              }
+            },
+            {
+              "name": "startDate",
+              "required": false,
+              "in": "query",
+              "description": "Start date filter (from)",
+              "schema": {
+                "example": "2024-01-01T00:00:00.000Z",
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": false,
+              "in": "query",
+              "description": "End date filter (to)",
+              "schema": {
+                "example": "2024-12-31T23:59:59.999Z",
+                "type": "string"
+              }
+            },
+            {
+              "name": "format",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BinaryFileResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Export Leave Records",
+          "tags": [
+            "Leave"
+          ]
+        }
+      },
+      "/api/v1/notification/register-device": {
+        "post": {
+          "operationId": "NotificationController_registerDeviceToken",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterDeviceTokenDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/MessageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Register Device Token for Push Notifications",
+          "tags": [
+            "Notification"
+          ]
+        }
+      },
+      "/api/v1/notification": {
+        "get": {
+          "operationId": "NotificationController_getNotifications",
+          "parameters": [
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "example": 10,
+                "type": "number"
+              }
+            },
+            {
+              "name": "isRead",
+              "required": false,
+              "in": "query",
+              "description": "Filter by read status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "true",
+                  "false"
+                ]
+              }
+            },
+            {
+              "name": "type",
+              "required": false,
+              "in": "query",
+              "description": "Filter by notification type",
+              "schema": {
+                "example": "reminder",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NotificationListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Notifications",
+          "tags": [
+            "Notification"
+          ]
+        }
+      },
+      "/api/v1/notification/unread-count": {
+        "get": {
+          "operationId": "NotificationController_getUnreadCount",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UnreadCountResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Unread Notification Count",
+          "tags": [
+            "Notification"
+          ]
+        }
+      },
+      "/api/v1/notification/{id}/read": {
+        "patch": {
+          "operationId": "NotificationController_markAsRead",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Mark Notification as Read",
+          "tags": [
+            "Notification"
+          ]
+        }
+      },
+      "/api/v1/notification/read-all": {
+        "patch": {
+          "operationId": "NotificationController_markAllAsRead",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Mark All Notifications as Read",
+          "tags": [
+            "Notification"
+          ]
+        }
+      },
+      "/api/v1/notification-template": {
+        "post": {
+          "operationId": "NotificationTemplateController_createTemplate",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNotificationTemplateDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NotificationTemplateResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Create Notification Template",
+          "tags": [
+            "Notification Template"
+          ]
+        },
+        "get": {
+          "operationId": "NotificationTemplateController_getAllTemplates",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NotificationTemplateListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get All Notification Templates",
+          "tags": [
+            "Notification Template"
+          ]
+        }
+      },
+      "/api/v1/notification-template/active": {
+        "get": {
+          "operationId": "NotificationTemplateController_getActiveTemplates",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NotificationTemplateListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Active Notification Templates",
+          "tags": [
+            "Notification Template"
+          ]
+        }
+      },
+      "/api/v1/notification-template/{id}": {
+        "get": {
+          "operationId": "NotificationTemplateController_getTemplateById",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NotificationTemplateResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Notification Template By Id",
+          "tags": [
+            "Notification Template"
+          ]
+        },
+        "patch": {
+          "operationId": "NotificationTemplateController_updateTemplate",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateNotificationTemplateDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NotificationTemplateResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Update Notification Template",
+          "tags": [
+            "Notification Template"
+          ]
+        },
+        "delete": {
+          "operationId": "NotificationTemplateController_deleteTemplate",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SuccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Delete Notification Template",
+          "tags": [
+            "Notification Template"
+          ]
+        }
+      },
+      "/api/v1/statistics/dashboard": {
+        "get": {
+          "operationId": "StatisticsController_getDashboardStatistics",
+          "parameters": [
+            {
+              "name": "tutorId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "schoolId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "startDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/StatisticsDashboardResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Dashboard Statistics",
+          "tags": [
+            "Statistics"
+          ]
+        }
+      },
+      "/api/v1/statistics/attendance": {
+        "get": {
+          "operationId": "StatisticsController_getAttendanceStatistics",
+          "parameters": [
+            {
+              "name": "tutorId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "schoolId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "startDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/StatisticsAttendanceResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Attendance Statistics",
+          "tags": [
+            "Statistics"
+          ]
+        }
+      },
+      "/api/v1/statistics/leave": {
+        "get": {
+          "operationId": "StatisticsController_getLeaveStatistics",
+          "parameters": [
+            {
+              "name": "tutorId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "startDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "endDate",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/StatisticsLeaveResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Leave Statistics",
+          "tags": [
+            "Statistics"
+          ]
+        }
+      },
+      "/api/v1/statistics/course": {
+        "get": {
+          "operationId": "StatisticsController_getCourseStatistics",
+          "parameters": [
+            {
+              "name": "tutorId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "schoolId",
+              "required": true,
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/StatisticsCourseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Get Course Statistics",
+          "tags": [
+            "Statistics"
+          ]
+        }
+      }
+    },
+    "info": {
+      "title": "MU COMP FYP API",
+      "description": "API Documentation - Version 1.0",
+      "version": "1.0",
+      "contact": {}
+    },
+    "tags": [],
+    "servers": [],
+    "components": {
+      "securitySchemes": {
+        "bearer": {
+          "scheme": "bearer",
+          "bearerFormat": "JWT",
+          "type": "http"
+        }
+      },
+      "schemas": {
+        "LoginDto": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "使用者名稱或電子郵件（根據角色決定）",
+              "example": "user@example.com"
+            },
+            "password": {
+              "type": "string",
+              "description": "使用者密碼",
+              "example": "P@ssw0rd"
+            },
+            "role": {
+              "type": "string",
+              "description": "用戶角色 (tutor: 使用 username 登入, staff: 使用 email 登入)",
+              "example": "tutor",
+              "enum": [
+                "tutor",
+                "staff"
+              ]
+            }
+          },
+          "required": [
+            "username",
+            "password",
+            "role"
+          ]
+        },
+        "LogoutDto": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "description": "Session ID to logout",
+              "example": "session_12345"
+            },
+            "logoutAll": {
+              "type": "boolean",
+              "description": "Logout from all devices",
+              "example": false,
+              "default": false
+            }
+          }
+        },
+        "RefreshTokenDto": {
+          "type": "object",
+          "properties": {
+            "refreshToken": {
+              "type": "string",
+              "description": "Refresh token",
+              "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            },
+            "sessionId": {
+              "type": "string",
+              "description": "Session ID",
+              "example": "session_12345"
+            }
+          },
+          "required": [
+            "refreshToken",
+            "sessionId"
+          ]
+        },
+        "ChangePasswordDto": {
+          "type": "object",
+          "properties": {
+            "oldPassword": {
+              "type": "string",
+              "description": "Current password",
+              "example": "OldPassword123!"
+            },
+            "newPassword": {
+              "type": "string",
+              "description": "New password (minimum 6 characters)",
+              "example": "NewPassword123!"
+            }
+          },
+          "required": [
+            "oldPassword",
+            "newPassword"
+          ]
+        },
+        "CreateUserDto": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "使用者名稱（導師必填）",
+              "example": "tutor123"
+            },
+            "email": {
+              "type": "string",
+              "description": "使用者電子郵件",
+              "example": "user@example.com"
+            },
+            "password": {
+              "type": "string",
+              "description": "使用者密碼 (至少 6 碼)",
+              "example": "P@ssw0rd"
+            },
+            "name": {
+              "type": "string",
+              "description": "使用者姓名",
+              "example": "Leo Wu"
+            },
+            "role": {
+              "type": "string",
+              "description": "用戶角色",
+              "example": "staff",
+              "enum": [
+                "tutor",
+                "staff"
+              ]
+            }
+          },
+          "required": [
+            "email",
+            "password",
+            "name"
+          ]
+        },
+        "UserResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "description": "使用者ID",
+              "example": "652f1b9d2f1c4a6d8f0e1234"
+            },
+            "username": {
+              "type": "string",
+              "description": "使用者名稱(僅 tutor 可能有)",
+              "example": "T999"
+            },
+            "email": {
+              "type": "string",
+              "description": "電子郵件",
+              "example": "admin@example.com"
+            },
+            "name": {
+              "type": "string",
+              "description": "姓名",
+              "example": "Admin"
+            },
+            "role": {
+              "type": "string",
+              "description": "角色",
+              "example": "staff"
+            },
+            "isActive": {
+              "type": "boolean",
+              "description": "是否啟用",
+              "example": true
+            },
+            "createdAt": {
+              "format": "date-time",
+              "type": "string",
+              "description": "建立時間",
+              "example": "2025-01-01T00:00:00.000Z"
+            },
+            "updatedAt": {
+              "format": "date-time",
+              "type": "string",
+              "description": "更新時間",
+              "example": "2025-01-02T12:34:56.000Z"
+            }
+          },
+          "required": [
+            "email",
+            "name"
+          ]
+        },
+        "UsersListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/UserResponseDto"
+              }
+            },
+            "total": {
+              "type": "number",
+              "description": "符合條件的總筆數",
+              "example": 42
+            }
+          },
+          "required": [
+            "items",
+            "total"
+          ]
+        },
+        "UpdateUserDto": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "Email",
+              "example": "new@example.com"
+            },
+            "password": {
+              "type": "string",
+              "description": "新密碼 (至少 6 碼)",
+              "example": "N3wP@ssw0rd"
+            },
+            "name": {
+              "type": "string",
+              "description": "姓名",
+              "example": "New Name"
+            },
+            "avatar": {
+              "type": "string",
+              "description": "頭像 URL",
+              "example": "https://example.com/avatar.png"
+            },
+            "fcmToken": {
+              "type": "string",
+              "description": "Firebase Cloud Messaging token",
+              "example": "fcm_token_here"
+            },
+            "mustChangePassword": {
+              "type": "boolean",
+              "description": "是否必須更改密碼",
+              "example": false
+            }
+          }
+        },
+        "ActiveUserDto": {
+          "type": "object",
+          "properties": {
+            "isActive": {
+              "type": "string",
+              "description": "active",
+              "default": "true",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        },
+        "SuccessResponse": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "success status",
+              "example": "true"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "ResetPasswordDto": {
+          "type": "object",
+          "properties": {
+            "newPassword": {
+              "type": "string",
+              "description": "新密碼 (至少 6 碼)",
+              "example": "NewP@ssw0rd123"
+            }
+          },
+          "required": [
+            "newPassword"
+          ]
+        },
+        "MessageResponseDto": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "example": true
+            },
+            "message": {
+              "type": "string",
+              "example": "Operation completed"
+            }
+          },
+          "required": [
+            "success",
+            "message"
+          ]
+        },
+        "FileResponseDto": {
+          "type": "object",
+          "properties": {
+            "originalName": {
+              "type": "string",
+              "example": "file1.pdf"
+            },
+            "filename": {
+              "type": "string",
+              "example": "file1.pdf"
+            },
+            "path": {
+              "type": "string",
+              "example": "uploads/file1.pdf"
+            },
+            "url": {
+              "type": "string",
+              "example": "https://example.com/file1.pdf"
+            },
+            "size": {
+              "type": "number",
+              "example": 100000
+            },
+            "mimetype": {
+              "type": "string",
+              "example": "application/pdf"
+            }
+          },
+          "required": [
+            "originalName",
+            "filename",
+            "path",
+            "url",
+            "size",
+            "mimetype"
+          ]
+        },
+        "FileUploadResponseDto": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "example": "檔案上傳成功"
+            },
+            "file": {
+              "$ref": "#/components/schemas/FileResponseDto"
+            }
+          },
+          "required": [
+            "message",
+            "file"
+          ]
+        },
+        "BinaryFileResponseDto": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "required": [
+            "file"
+          ]
+        },
+        "SignedUrlResponseDto": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "example": "https://example.com/signed-url"
+            },
+            "expiresIn": {
+              "type": "number",
+              "example": 3600
+            }
+          },
+          "required": [
+            "url",
+            "expiresIn"
+          ]
+        },
+        "GpsDto": {
+          "type": "object",
+          "properties": {
+            "lat": {
+              "type": "number",
+              "example": 1.2345
+            },
+            "long": {
+              "type": "number",
+              "example": 6.789
+            }
+          },
+          "required": [
+            "lat",
+            "long"
+          ]
+        },
+        "CreateSchoolDto": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "School Name",
+              "example": "School A"
+            },
+            "gps": {
+              "description": "GPS Coordinates",
+              "example": {
+                "lat": 1.2345,
+                "long": 6.789
+              },
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/GpsDto"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "gps"
+          ]
+        },
+        "SchoolGpsDto": {
+          "type": "object",
+          "properties": {
+            "lat": {
+              "type": "number",
+              "example": 22.315654
+            },
+            "long": {
+              "type": "number",
+              "example": 114.1779545
+            }
+          },
+          "required": [
+            "lat",
+            "long"
+          ]
+        },
+        "SchoolResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "name": {
+              "type": "string",
+              "example": "Hong Kong Metropolitan University"
+            },
+            "gps": {
+              "$ref": "#/components/schemas/SchoolGpsDto"
+            },
+            "isDeleted": {
+              "type": "boolean",
+              "example": false
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "updatedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            }
+          },
+          "required": [
+            "name",
+            "gps"
+          ]
+        },
+        "SchoolListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/SchoolResponseDto"
+              }
+            },
+            "total": {
+              "type": "number",
+              "example": 100
+            },
+            "page": {
+              "type": "number",
+              "example": 1
+            },
+            "limit": {
+              "type": "number",
+              "example": 10
+            },
+            "pages": {
+              "type": "number",
+              "example": 10
+            }
+          },
+          "required": [
+            "items",
+            "total",
+            "page",
+            "limit",
+            "pages"
+          ]
+        },
+        "UpdateSchoolDto": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "School Name",
+              "example": "School A"
+            },
+            "gps": {
+              "description": "GPS Coordinates",
+              "example": {
+                "lat": 1.2345,
+                "long": 6.789
+              },
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/GpsDto"
+                }
+              ]
+            }
+          }
+        },
+        "CourseTimestampDto": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "number",
+              "example": 1768957200000
+            },
+            "end": {
+              "type": "number",
+              "example": 1768963800000
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ]
+        },
+        "CreateCourseDto": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "course name",
+              "example": "course name"
+            },
+            "overview": {
+              "type": "string",
+              "description": "course overview",
+              "example": "course overview"
+            },
+            "room": {
+              "type": "string",
+              "description": "course room",
+              "example": "course room"
+            },
+            "files": {
+              "description": "course files",
+              "example": [
+                {
+                  "originalName": "file1.pdf",
+                  "filename": "file1.pdf",
+                  "path": "uploads/file1.pdf",
+                  "url": "https://example.com/file1.pdf",
+                  "size": 100000,
+                  "mimetype": "application/pdf"
+                },
+                {
+                  "originalName": "file2.pdf",
+                  "filename": "file2.pdf",
+                  "path": "uploads/file2.pdf",
+                  "url": "https://example.com/file2.pdf",
+                  "size": 200000,
+                  "mimetype": "application/pdf"
+                }
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "schoolId": {
+              "type": "string",
+              "description": "school id",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "tutorId": {
+              "type": "string",
+              "description": "tutor id",
+              "example": "654321",
+              "maxLength": 24,
+              "minLength": 24
+            },
+            "timestamps": {
+              "description": "course dates",
+              "example": [
+                {
+                  "start": 1768957200000,
+                  "end": 1768963800000
+                }
+              ],
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CourseTimestampDto"
+              }
+            }
+          },
+          "required": [
+            "name",
+            "overview",
+            "room",
+            "files",
+            "schoolId",
+            "tutorId",
+            "timestamps"
+          ]
+        },
+        "CourseFileDto": {
+          "type": "object",
+          "properties": {
+            "originalName": {
+              "type": "string",
+              "example": "file1.pdf"
+            },
+            "filename": {
+              "type": "string",
+              "example": "file1.pdf"
+            },
+            "path": {
+              "type": "string",
+              "example": "uploads/file1.pdf"
+            },
+            "url": {
+              "type": "string",
+              "example": "https://example.com/file1.pdf"
+            },
+            "size": {
+              "type": "number",
+              "example": 100000
+            },
+            "mimetype": {
+              "type": "string",
+              "example": "application/pdf"
+            }
+          },
+          "required": [
+            "originalName",
+            "filename",
+            "path",
+            "url",
+            "size",
+            "mimetype"
+          ]
+        },
+        "CourseResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "name": {
+              "type": "string",
+              "example": "Course Name"
+            },
+            "overview": {
+              "type": "string",
+              "example": "Course overview"
+            },
+            "room": {
+              "type": "string",
+              "example": "Room 101"
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CourseFileDto"
+              }
+            },
+            "schoolId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439012"
+            },
+            "tutorId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439013"
+            },
+            "timestamps": {
+              "example": [
+                {
+                  "start": 1768957200000,
+                  "end": 1768963800000
+                }
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "isDeleted": {
+              "type": "boolean",
+              "example": false
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "updatedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            }
+          },
+          "required": [
+            "name",
+            "overview",
+            "room",
+            "files",
+            "schoolId",
+            "tutorId",
+            "timestamps"
+          ]
+        },
+        "CourseListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CourseResponseDto"
+              }
+            },
+            "total": {
+              "type": "number",
+              "example": 100
+            },
+            "page": {
+              "type": "number",
+              "example": 1
+            },
+            "limit": {
+              "type": "number",
+              "example": 10
+            },
+            "pages": {
+              "type": "number",
+              "example": 10
+            }
+          },
+          "required": [
+            "items",
+            "total",
+            "page",
+            "limit",
+            "pages"
+          ]
+        },
+        "UpdateCourseDto": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "course name",
+              "example": "course name"
+            },
+            "overview": {
+              "type": "string",
+              "description": "course overview",
+              "example": "course overview"
+            },
+            "room": {
+              "type": "string",
+              "description": "course room",
+              "example": "course room"
+            },
+            "files": {
+              "description": "course files",
+              "example": [
+                {
+                  "originalName": "file1.pdf",
+                  "filename": "file1.pdf",
+                  "path": "uploads/file1.pdf",
+                  "url": "https://example.com/file1.pdf",
+                  "size": 100000,
+                  "mimetype": "application/pdf"
+                },
+                {
+                  "originalName": "file2.pdf",
+                  "filename": "file2.pdf",
+                  "path": "uploads/file2.pdf",
+                  "url": "https://example.com/file2.pdf",
+                  "size": 200000,
+                  "mimetype": "application/pdf"
+                }
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "schoolId": {
+              "type": "string",
+              "description": "school id",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "tutorId": {
+              "type": "string",
+              "description": "tutor id",
+              "example": "654321",
+              "maxLength": 24,
+              "minLength": 24
+            },
+            "timestamps": {
+              "description": "course dates",
+              "example": [
+                {
+                  "start": 1768957200000,
+                  "end": 1768963800000
+                }
+              ],
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CourseTimestampDto"
+              }
+            }
+          }
+        },
+        "CourseFilesResponseDto": {
+          "type": "object",
+          "properties": {
+            "courseId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "courseName": {
+              "type": "string",
+              "example": "Course Name"
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CourseFileDto"
+              }
+            }
+          },
+          "required": [
+            "courseId",
+            "courseName",
+            "files"
+          ]
+        },
+        "AttendanceResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "courseId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439012"
+            },
+            "timestamp": {
+              "type": "object",
+              "example": {
+                "start": 1768957200000,
+                "end": 1768963800000
+              }
+            },
+            "timestamp_index": {
+              "type": "number",
+              "example": 0
+            },
+            "checked": {
+              "type": "boolean",
+              "example": false
+            },
+            "tutorId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439013"
+            },
+            "schoolId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439014"
+            },
+            "photoUrl": {
+              "type": "string",
+              "example": "https://example.com/photo.jpg"
+            },
+            "checkInTime": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "isDeleted": {
+              "type": "boolean",
+              "example": false
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "updatedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            }
+          },
+          "required": [
+            "_id",
+            "courseId",
+            "timestamp",
+            "timestamp_index",
+            "checked",
+            "tutorId",
+            "schoolId",
+            "isDeleted"
+          ]
+        },
+        "AttendanceListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/AttendanceResponseDto"
+              }
+            },
+            "total": {
+              "type": "number",
+              "example": 100
+            },
+            "page": {
+              "type": "number",
+              "example": 1
+            },
+            "limit": {
+              "type": "number",
+              "example": 10
+            },
+            "pages": {
+              "type": "number",
+              "example": 10
+            },
+            "courses": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/components/schemas/CourseResponseDto"
+              }
+            },
+            "schools": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/components/schemas/SchoolResponseDto"
+              }
+            }
+          },
+          "required": [
+            "items",
+            "total",
+            "page",
+            "limit",
+            "pages"
+          ]
+        },
+        "CreateLeaveDto": {
+          "type": "object",
+          "properties": {
+            "courseId": {
+              "type": "string",
+              "description": "Course ID (optional, if leave is for specific course)",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Leave reason",
+              "example": "Personal matters"
+            },
+            "startDate": {
+              "type": "string",
+              "description": "Leave start date",
+              "example": "2024-01-15T00:00:00.000Z"
+            },
+            "endDate": {
+              "type": "string",
+              "description": "Leave end date",
+              "example": "2024-01-16T00:00:00.000Z"
+            }
+          },
+          "required": [
+            "reason",
+            "startDate",
+            "endDate"
+          ]
+        },
+        "LeaveResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "tutorId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439012"
+            },
+            "courseId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439013"
+            },
+            "reason": {
+              "type": "string",
+              "example": "Sick leave"
+            },
+            "startDate": {
+              "type": "string",
+              "example": "2026-01-20T00:00:00.000Z"
+            },
+            "endDate": {
+              "type": "string",
+              "example": "2026-01-21T00:00:00.000Z"
+            },
+            "status": {
+              "type": "string",
+              "example": "pending"
+            },
+            "approvedBy": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439014"
+            },
+            "approvedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "rejectionReason": {
+              "type": "string",
+              "example": "Insufficient reason"
+            },
+            "isDeleted": {
+              "type": "boolean",
+              "example": false
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "updatedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            }
+          },
+          "required": [
+            "tutorId",
+            "reason",
+            "startDate",
+            "endDate",
+            "status",
+            "isDeleted"
+          ]
+        },
+        "LeaveListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/LeaveResponseDto"
+              }
+            },
+            "total": {
+              "type": "number",
+              "example": 100
+            },
+            "page": {
+              "type": "number",
+              "example": 1
+            },
+            "limit": {
+              "type": "number",
+              "example": 10
+            },
+            "pages": {
+              "type": "number",
+              "example": 10
+            }
+          },
+          "required": [
+            "items",
+            "total",
+            "page",
+            "limit",
+            "pages"
+          ]
+        },
+        "UpdateLeaveDto": {
+          "type": "object",
+          "properties": {
+            "courseId": {
+              "type": "string",
+              "description": "Course ID (optional, if leave is for specific course)",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Leave reason",
+              "example": "Personal matters"
+            },
+            "startDate": {
+              "type": "string",
+              "description": "Leave start date",
+              "example": "2024-01-15T00:00:00.000Z"
+            },
+            "endDate": {
+              "type": "string",
+              "description": "Leave end date",
+              "example": "2024-01-16T00:00:00.000Z"
+            }
+          }
+        },
+        "ApproveLeaveDto": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action: approve or reject",
+              "example": "approved",
+              "enum": [
+                "approved",
+                "rejected"
+              ]
+            },
+            "rejectionReason": {
+              "type": "string",
+              "description": "Rejection reason (required if action is rejected)",
+              "example": "Not enough notice"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        "RegisterDeviceTokenDto": {
+          "type": "object",
+          "properties": {
+            "fcmToken": {
+              "type": "string",
+              "description": "Firebase Cloud Messaging token",
+              "example": "fcm_token_here"
+            }
+          },
+          "required": [
+            "fcmToken"
+          ]
+        },
+        "NotificationResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "userId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439012"
+            },
+            "type": {
+              "type": "string",
+              "example": "reminder"
+            },
+            "title": {
+              "type": "string",
+              "example": "Course Reminder"
+            },
+            "content": {
+              "type": "string",
+              "example": "Your class starts tomorrow."
+            },
+            "courseId": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439013"
+            },
+            "isRead": {
+              "type": "boolean",
+              "example": false
+            },
+            "sentAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "updatedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            }
+          },
+          "required": [
+            "userId",
+            "type",
+            "title",
+            "content",
+            "isRead",
+            "sentAt"
+          ]
+        },
+        "NotificationListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/NotificationResponseDto"
+              }
+            },
+            "total": {
+              "type": "number",
+              "example": 100
+            },
+            "page": {
+              "type": "number",
+              "example": 1
+            },
+            "limit": {
+              "type": "number",
+              "example": 10
+            },
+            "pages": {
+              "type": "number",
+              "example": 10
+            }
+          },
+          "required": [
+            "items",
+            "total",
+            "page",
+            "limit",
+            "pages"
+          ]
+        },
+        "UnreadCountResponseDto": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "number",
+              "example": 5
+            }
+          },
+          "required": [
+            "count"
+          ]
+        },
+        "CreateNotificationTemplateDto": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Template name",
+              "example": "Course Reminder"
+            },
+            "type": {
+              "type": "string",
+              "description": "Notification type",
+              "example": "reminder",
+              "enum": [
+                "reminder",
+                "leave_approved",
+                "leave_rejected",
+                "other"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "description": "Notification title template",
+              "example": "課程提醒：{{courseName}}"
+            },
+            "content": {
+              "type": "string",
+              "description": "Notification content template",
+              "example": "親愛的 {{tutorName}}，您有一個課程將在 24 小時後開始：{{courseName}}"
+            },
+            "isActive": {
+              "type": "boolean",
+              "description": "Is template active",
+              "example": true
+            }
+          },
+          "required": [
+            "name",
+            "type",
+            "title",
+            "content"
+          ]
+        },
+        "NotificationTemplateResponseDto": {
+          "type": "object",
+          "properties": {
+            "_id": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "name": {
+              "type": "string",
+              "example": "Course Reminder"
+            },
+            "type": {
+              "type": "string",
+              "example": "reminder"
+            },
+            "title": {
+              "type": "string",
+              "example": "Reminder: {{courseName}}"
+            },
+            "content": {
+              "type": "string",
+              "example": "Your class is tomorrow at {{courseTime}}"
+            },
+            "isActive": {
+              "type": "boolean",
+              "example": true
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            },
+            "updatedAt": {
+              "type": "string",
+              "example": "2026-01-20T13:44:45.000Z"
+            }
+          },
+          "required": [
+            "name",
+            "type",
+            "title",
+            "content",
+            "isActive"
+          ]
+        },
+        "NotificationTemplateListResponseDto": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/NotificationTemplateResponseDto"
+              }
+            }
+          },
+          "required": [
+            "items"
+          ]
+        },
+        "UpdateNotificationTemplateDto": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Template name",
+              "example": "Course Reminder"
+            },
+            "type": {
+              "type": "string",
+              "description": "Notification type",
+              "example": "reminder",
+              "enum": [
+                "reminder",
+                "leave_approved",
+                "leave_rejected",
+                "other"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "description": "Notification title template",
+              "example": "課程提醒：{{courseName}}"
+            },
+            "content": {
+              "type": "string",
+              "description": "Notification content template",
+              "example": "親愛的 {{tutorName}}，您有一個課程將在 24 小時後開始：{{courseName}}"
+            },
+            "isActive": {
+              "type": "boolean",
+              "description": "Is template active",
+              "example": true
+            }
+          }
+        },
+        "StatisticsAttendanceResponseDto": {
+          "type": "object",
+          "properties": {
+            "summary": {
+              "type": "object",
+              "properties": {
+                "total": {
+                  "type": "number"
+                },
+                "checked": {
+                  "type": "number"
+                },
+                "unchecked": {
+                  "type": "number"
+                },
+                "attendanceRate": {
+                  "type": "number"
+                }
+              }
+            },
+            "byTutor": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "bySchool": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "summary",
+            "byTutor",
+            "bySchool"
+          ]
+        },
+        "StatisticsLeaveResponseDto": {
+          "type": "object",
+          "properties": {
+            "summary": {
+              "type": "object",
+              "properties": {
+                "total": {
+                  "type": "number"
+                },
+                "pending": {
+                  "type": "number"
+                },
+                "approved": {
+                  "type": "number"
+                },
+                "rejected": {
+                  "type": "number"
+                },
+                "approvalRate": {
+                  "type": "number"
+                }
+              }
+            },
+            "byStatus": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "byTutor": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "summary",
+            "byStatus",
+            "byTutor"
+          ]
+        },
+        "StatisticsCourseResponseDto": {
+          "type": "object",
+          "properties": {
+            "summary": {
+              "type": "object",
+              "properties": {
+                "total": {
+                  "type": "number"
+                }
+              }
+            },
+            "byTutor": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "bySchool": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "summary",
+            "byTutor",
+            "bySchool"
+          ]
+        },
+        "StatisticsDashboardResponseDto": {
+          "type": "object",
+          "properties": {
+            "attendance": {
+              "$ref": "#/components/schemas/StatisticsAttendanceResponseDto"
+            },
+            "leave": {
+              "$ref": "#/components/schemas/StatisticsLeaveResponseDto"
+            },
+            "course": {
+              "$ref": "#/components/schemas/StatisticsCourseResponseDto"
+            },
+            "users": {
+              "type": "object",
+              "properties": {
+                "totalTutors": {
+                  "type": "number"
+                },
+                "totalStaff": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "required": [
+            "attendance",
+            "leave",
+            "course",
+            "users"
+          ]
+        }
+      }
+    }
+  },
+  "customOptions": {}
+}
