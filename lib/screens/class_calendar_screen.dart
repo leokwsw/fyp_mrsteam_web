@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_button.dart';
+import '../core/config/get_it.dart';
+import '../data/api/api_provider_course.dart';
+import '../data/api/api_provider_school.dart';
+import '../data/api/api_provider_users.dart';
+import '../data/model/response/res_course.dart';
+import '../data/model/response/res_school.dart';
+import '../data/model/response/res_user.dart';
 
 class ClassCalendarScreen extends StatefulWidget {
   const ClassCalendarScreen({Key? key}) : super(key: key);
@@ -12,18 +20,33 @@ class ClassCalendarScreen extends StatefulWidget {
 }
 
 class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
+  final ApiProviderCourse _courseApi = getIt<ApiProviderCourse>();
+  final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
+  final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
+
   late DateTime selectedMonth;
   late DateTime currentDateTimeHK;
   String selectedTab = 'Upcoming';
-  String? selectedClassCode;
-  String? selectedSchool;
-  String? selectedTutor;
+  String? selectedCourseId;
+  String? selectedSchoolId;
+  String? selectedTutorId;
   String? selectedStatus;
+
+  List<CourseRes> allCourses = [];
+  Map<String, SchoolRes> schoolsMap = {};
+  Map<String, UserResponse> tutorsMap = {};
+  
+  // Filter options
+  List<CourseRes> courseOptions = [];
+  List<SchoolRes> schoolOptions = [];
+  List<UserResponse> tutorOptions = [];
+
+  bool isLoading = true;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with current Hong Kong time (GMT+8)
     currentDateTimeHK = _getHongKongTime();
     selectedMonth = DateTime(
       currentDateTimeHK.year,
@@ -31,19 +54,18 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
       1,
     );
 
-    // Update time every minute
+    _loadData();
+    
     Future.delayed(Duration.zero, () {
       _startTimeUpdate();
     });
   }
 
-  // Get current Hong Kong time (GMT+8)
   DateTime _getHongKongTime() {
     final now = DateTime.now().toUtc();
-    return now.add(Duration(hours: 8)); // GMT+8
+    return now.add(Duration(hours: 8));
   }
 
-  // Update time every minute
   void _startTimeUpdate() {
     Future.delayed(Duration(minutes: 1), () {
       if (mounted) {
@@ -55,94 +77,121 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     });
   }
 
-  // Sample class data with more details
-  final Map<int, List<CalendarClass>> allClassEvents = {
-    3: [
-      CalendarClass(
-        schoolName: 'Northwood High',
-        time: '13:00 - 14:30',
-        classCode: 'ENG-101-A',
-        color: Colors.red,
-        tutor: 'Dr. Sarah Johnson',
-        status: 'Canceled',
-        location: 'Room 301',
-        notes: 'Class canceled due to teacher illness',
-      ),
-    ],
-    8: [
-      CalendarClass(
-        schoolName: 'Oakridge Academy',
-        time: '09:30 - 11:00',
-        classCode: 'MATH-202-B',
-        color: Colors.green,
-        tutor: 'Dr. Harper',
-        status: 'Scheduled',
-        location: 'Room 205',
-        notes: 'Regular class session',
-      ),
-    ],
-    15: [
-      CalendarClass(
-        schoolName: 'Riverside Prep',
-        time: '10:00 - 11:30',
-        classCode: 'SCI-105-C',
-        color: Colors.green,
-        tutor: 'Dr. Carter',
-        status: 'Scheduled',
-        location: 'Lab Building A',
-        notes: 'Science lab session',
-      ),
-      CalendarClass(
-        schoolName: 'Northwood High',
-        time: '13:00 - 14:30',
-        classCode: 'ENG-101-A',
-        color: Colors.red,
-        tutor: 'Dr. Sarah Johnson',
-        status: 'Canceled',
-        location: 'Room 301',
-        notes: 'Rescheduled for next week',
-      ),
-    ],
-  };
-
-  // Get filtered events based on selected filters
-  Map<int, List<CalendarClass>> get filteredClassEvents {
-    Map<int, List<CalendarClass>> filtered = {};
-
-    allClassEvents.forEach((day, events) {
-      List<CalendarClass> filteredEvents = events.where((event) {
-        bool matchesClassCode =
-            selectedClassCode == null ||
-            selectedClassCode == 'All' ||
-            event.classCode == selectedClassCode;
-
-        bool matchesSchool =
-            selectedSchool == null ||
-            selectedSchool == 'All' ||
-            event.schoolName.contains(selectedSchool!);
-
-        bool matchesTutor =
-            selectedTutor == null ||
-            selectedTutor == 'All' ||
-            event.tutor == selectedTutor;
-
-        bool matchesStatus =
-            selectedStatus == null ||
-            selectedStatus == 'All' ||
-            event.status == selectedStatus;
-
-        return matchesClassCode &&
-            matchesSchool &&
-            matchesTutor &&
-            matchesStatus;
-      }).toList();
-
-      if (filteredEvents.isNotEmpty) {
-        filtered[day] = filteredEvents;
-      }
+  Future<void> _loadData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
     });
 
-    return filtered;
+    try {
+      final futures = await Future.wait([
+        _courseApi.getCourses(),
+        _schoolApi.getSchools(),
+        _usersApi.getUsers(role: 'tutor'),
+      ]);
+
+      final coursesRes = futures[0] as CourseListRes;
+      final schoolsRes = futures[1] as SchoolListRes;
+      final tutorsRes = futures[2] as dynamic;
+
+      courseOptions = coursesRes.items;
+      schoolOptions = schoolsRes.items;
+      tutorOptions = tutorsRes.items;
+
+      // Build lookup maps
+      for (var school in schoolOptions) {
+        if (school.id != null) {
+          schoolsMap[school.id!] = school;
+        }
+      }
+      for (var tutor in tutorOptions) {
+        if (tutor.id != null) {
+          tutorsMap[tutor.id!] = tutor;
+        }
+      }
+
+      setState(() {
+        allCourses = coursesRes.items;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  // Get events grouped by day for the selected month
+  Map<int, List<CalendarClass>> get filteredClassEvents {
+    Map<int, List<CalendarClass>> eventsMap = {};
+
+    for (var course in allCourses) {
+      // Apply filters
+      if (selectedCourseId != null && selectedCourseId != 'All' && course.id != selectedCourseId) {
+        continue;
+      }
+      if (selectedSchoolId != null && selectedSchoolId != 'All' && course.schoolId != selectedSchoolId) {
+        continue;
+      }
+      if (selectedTutorId != null && selectedTutorId != 'All' && course.tutorId != selectedTutorId) {
+        continue;
+      }
+
+      // Process each timestamp
+      for (var timestamp in course.timestamps) {
+        final startDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
+        final endDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
+
+        // Check if this timestamp is in the selected month
+        if (startDateTime.year == selectedMonth.year && 
+            startDateTime.month == selectedMonth.month) {
+          
+          // Apply tab filter
+          final now = currentDateTimeHK;
+          if (selectedTab == 'Upcoming' && startDateTime.isBefore(now)) continue;
+          if (selectedTab == 'Past' && startDateTime.isAfter(now)) continue;
+
+          // Determine status
+          String status = 'Scheduled';
+          if (course.isDeleted == true) {
+            status = 'Canceled';
+          } else if (endDateTime.isBefore(now)) {
+            status = 'Completed';
+          }
+
+          // Apply status filter
+          if (selectedStatus != null && selectedStatus != 'All' && status != selectedStatus) {
+            continue;
+          }
+
+          final school = schoolsMap[course.schoolId];
+          final tutor = tutorsMap[course.tutorId];
+
+          final calendarClass = CalendarClass(
+            courseId: course.id ?? '',
+            schoolName: school?.name ?? 'Unknown School',
+            time: '${_formatTime(startDateTime)} - ${_formatTime(endDateTime)}',
+            classCode: course.name,
+            color: status == 'Canceled' ? Colors.red : Colors.blue,
+            tutor: tutor?.name ?? 'Unknown Tutor',
+            status: status,
+            location: course.room,
+            notes: course.overview,
+          );
+
+          final day = startDateTime.day;
+          eventsMap.putIfAbsent(day, () => []);
+          eventsMap[day]!.add(calendarClass);
+        }
+      }
+    }
+
+    return eventsMap;
+  }
+
+  String _formatTime(DateTime dt) {
+    return DateFormat('HH:mm').format(dt);
   }
 
   void _previousMonth() {
@@ -157,7 +206,6 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     });
   }
 
-  // Go to current month
   void _goToToday() {
     setState(() {
       currentDateTimeHK = _getHongKongTime();
@@ -181,7 +229,6 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -191,33 +238,21 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                   ),
                   IconButton(
                     icon: Icon(Icons.close),
-                    onPressed: () => context.pop(),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-
-              // Class Code
-              _buildDetailRow('Class Code', event.classCode),
+              _buildDetailRow('Class Name', event.classCode),
               const SizedBox(height: 16),
-
-              // School
               _buildDetailRow('School', event.schoolName),
               const SizedBox(height: 16),
-
-              // Time
               _buildDetailRow('Time', event.time),
               const SizedBox(height: 16),
-
-              // Tutor
               _buildDetailRow('Tutor', event.tutor),
               const SizedBox(height: 16),
-
-              // Location
               _buildDetailRow('Location', event.location),
               const SizedBox(height: 16),
-
-              // Status
               Row(
                 children: [
                   Text(
@@ -231,39 +266,40 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: event.status == 'Canceled'
-                          ? Color(0xFFB71C1C).withOpacity(0.1)
-                          : Color(0xFF1E3A5F).withOpacity(0.1),
+                      color: _getStatusColor(event.status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: event.status == 'Canceled'
-                            ? Color(0xFFB71C1C)
-                            : Color(0xFF1E3A5F),
-                      ),
+                      border: Border.all(color: _getStatusColor(event.status)),
                     ),
                     child: Text(
                       event.status,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: event.status == 'Canceled'
-                            ? Color(0xFFB71C1C)
-                            : Color(0xFF1E3A5F),
+                        color: _getStatusColor(event.status),
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Notes
-              _buildDetailRow('Notes', event.notes),
+              _buildDetailRow('Overview', event.notes),
               const SizedBox(height: 24),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Canceled':
+        return Color(0xFFB71C1C);
+      case 'Completed':
+        return Colors.green;
+      default:
+        return Color(0xFF1E3A5F);
+    }
   }
 
   Widget _buildDetailRow(String label, String value) {
@@ -310,7 +346,6 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                     'Class',
                     style: TextStyle(fontSize: 36, fontWeight: FontWeight.w600),
                   ),
-                  // Current Hong Kong Time Display
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
@@ -320,11 +355,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 18,
-                          color: AppColors.textSecondary,
-                        ),
+                        Icon(Icons.access_time, size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 8),
                         Text(
                           _formatHongKongDateTime(currentDateTimeHK),
@@ -337,10 +368,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                         const SizedBox(width: 8),
                         Text(
                           '(GMT+8)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -375,15 +403,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Month navigation
                   Row(
                     children: [
                       Text(
                         '${_getMonthName(selectedMonth.month)} ${selectedMonth.year}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(width: 16),
                       IconButton(
@@ -397,17 +421,19 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                         tooltip: 'Next Month',
                       ),
                       const SizedBox(width: 8),
-                      // Today button
                       TextButton.icon(
                         onPressed: _goToToday,
                         icon: Icon(Icons.today, size: 18),
                         label: Text('Today'),
                         style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(Icons.refresh),
+                        onPressed: _loadData,
+                        tooltip: 'Refresh',
                       ),
                     ],
                   ),
@@ -419,62 +445,54 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
                     children: [
-                      _buildFilterDropdown(
-                        'Class Code',
-                        selectedClassCode,
-                        ['All', 'ENG-101-A', 'MATH-202-B', 'SCI-105-C'],
-                        (value) => setState(() => selectedClassCode = value),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildFilterDropdown(
-                        'School',
-                        selectedSchool,
-                        [
-                          'All',
-                          'Northwood High',
-                          'Oakridge Academy',
-                          'Riverside Prep',
-                        ],
-                        (value) => setState(() => selectedSchool = value),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildFilterDropdown(
-                        'Tutor',
-                        selectedTutor,
-                        [
-                          'All',
-                          'Dr. Harper',
-                          'Dr. Carter',
-                          'Dr. Sarah Johnson',
-                        ],
-                        (value) => setState(() => selectedTutor = value),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildFilterDropdown(
-                        'Status',
-                        selectedStatus,
-                        ['All', 'Scheduled', 'Canceled', 'Completed'],
-                        (value) => setState(() => selectedStatus = value),
-                      ),
+                      _buildCourseDropdown(),
+                      _buildSchoolDropdown(),
+                      _buildTutorDropdown(),
+                      _buildStatusDropdown(),
                     ],
                   ),
                   SizedBox(
                     width: 140,
                     child: CustomButton(
                       text: 'New Class',
-                      onPressed: () {
-                        context.push('/class/create');
-                      },
+                      onPressed: () => context.push('/class/create'),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Calendar
-              _buildCalendar(),
+              // Content
+              if (isLoading)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (errorMessage != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error loading classes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        Text(errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
+                        const SizedBox(height: 16),
+                        ElevatedButton(onPressed: _loadData, child: Text('Retry')),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                _buildCalendar(),
             ],
           ),
         ),
@@ -491,6 +509,137 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     final month = dt.month.toString().padLeft(2, '0');
 
     return '$dayName, $day/$month/${dt.year} $hour:$minute';
+  }
+
+  Widget _buildCourseDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedCourseId,
+          hint: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Class', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Icon(Icons.arrow_drop_down, size: 20),
+            ],
+          ),
+          icon: Container(),
+          items: [
+            DropdownMenuItem(value: null, child: Text('All Classes')),
+            ...courseOptions.map((course) => DropdownMenuItem(
+              value: course.id,
+              child: Text(course.name, style: TextStyle(fontSize: 14)),
+            )),
+          ],
+          onChanged: (value) => setState(() => selectedCourseId = value),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSchoolDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedSchoolId,
+          hint: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('School', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Icon(Icons.arrow_drop_down, size: 20),
+            ],
+          ),
+          icon: Container(),
+          items: [
+            DropdownMenuItem(value: null, child: Text('All Schools')),
+            ...schoolOptions.map((school) => DropdownMenuItem(
+              value: school.id,
+              child: Text(school.name, style: TextStyle(fontSize: 14)),
+            )),
+          ],
+          onChanged: (value) => setState(() => selectedSchoolId = value),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTutorDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedTutorId,
+          hint: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Tutor', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Icon(Icons.arrow_drop_down, size: 20),
+            ],
+          ),
+          icon: Container(),
+          items: [
+            DropdownMenuItem(value: null, child: Text('All Tutors')),
+            ...tutorOptions.map((tutor) => DropdownMenuItem(
+              value: tutor.id,
+              child: Text(tutor.name, style: TextStyle(fontSize: 14)),
+            )),
+          ],
+          onChanged: (value) => setState(() => selectedTutorId = value),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedStatus,
+          hint: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Status', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Icon(Icons.arrow_drop_down, size: 20),
+            ],
+          ),
+          icon: Container(),
+          items: [
+            DropdownMenuItem(value: null, child: Text('All Status')),
+            DropdownMenuItem(value: 'Scheduled', child: Text('Scheduled')),
+            DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+            DropdownMenuItem(value: 'Canceled', child: Text('Canceled')),
+          ],
+          onChanged: (value) => setState(() => selectedStatus = value),
+        ),
+      ),
+    );
   }
 
   Widget _buildViewButton(String text, bool isCalendar) {
@@ -522,11 +671,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   Widget _buildTab(String text) {
     bool isActive = selectedTab == text;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedTab = text;
-        });
-      },
+      onTap: () => setState(() => selectedTab = text),
       child: Column(
         children: [
           Text(
@@ -549,66 +694,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     );
   }
 
-  Widget _buildFilterDropdown(
-    String label,
-    String? value,
-    List<String> items,
-    Function(String?) onChanged,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label, style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
-            ],
-          ),
-          icon: Container(),
-          items: items
-              .map(
-                (item) => DropdownMenuItem(
-                  value: item,
-                  child: Text(item, style: TextStyle(fontSize: 14)),
-                ),
-              )
-              .toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-
   Widget _buildCalendar() {
-    // Get first day of month and number of days
-    final firstDayOfMonth = DateTime(
-      selectedMonth.year,
-      selectedMonth.month,
-      1,
-    );
-    final lastDayOfMonth = DateTime(
-      selectedMonth.year,
-      selectedMonth.month + 1,
-      0,
-    );
+    final firstDayOfMonth = DateTime(selectedMonth.year, selectedMonth.month, 1);
+    final lastDayOfMonth = DateTime(selectedMonth.year, selectedMonth.month + 1, 0);
     final daysInMonth = lastDayOfMonth.day;
-    final startWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday
-
-    // Get previous month's last days to fill the grid
-    final prevMonthLastDay = DateTime(
-      selectedMonth.year,
-      selectedMonth.month,
-      0,
-    ).day;
+    final startWeekday = firstDayOfMonth.weekday % 7;
+    final prevMonthLastDay = DateTime(selectedMonth.year, selectedMonth.month, 0).day;
     final prevMonthDaysToShow = startWeekday;
 
     return Container(
@@ -619,7 +710,6 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
       ),
       child: Column(
         children: [
-          // Calendar Header (Days of Week)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
@@ -637,14 +727,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               ],
             ),
           ),
-
-          // Calendar Grid
-          _buildCalendarGrid(
-            daysInMonth,
-            startWeekday,
-            prevMonthLastDay,
-            prevMonthDaysToShow,
-          ),
+          _buildCalendarGrid(daysInMonth, startWeekday, prevMonthLastDay, prevMonthDaysToShow),
         ],
       ),
     );
@@ -666,17 +749,10 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid(
-    int daysInMonth,
-    int startWeekday,
-    int prevMonthLastDay,
-    int prevMonthDaysToShow,
-  ) {
+  Widget _buildCalendarGrid(int daysInMonth, int startWeekday, int prevMonthLastDay, int prevMonthDaysToShow) {
     List<Widget> weeks = [];
     int currentDay = 1;
     int nextMonthDay = 1;
-
-    // Calculate total rows needed (usually 5-6 weeks)
     int totalCells = daysInMonth + startWeekday;
     int numWeeks = (totalCells / 7).ceil();
 
@@ -687,43 +763,29 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         int cellIndex = week * 7 + weekday;
 
         if (cellIndex < startWeekday) {
-          // Previous month's days
           int prevDay = prevMonthLastDay - prevMonthDaysToShow + cellIndex + 1;
           days.add(_buildCalendarCell(prevDay, true, []));
         } else if (currentDay <= daysInMonth) {
-          // Current month's days
-          // Check if this is today (comparing with Hong Kong time)
-          bool isToday =
-              selectedMonth.year == currentDateTimeHK.year &&
+          bool isToday = selectedMonth.year == currentDateTimeHK.year &&
               selectedMonth.month == currentDateTimeHK.month &&
               currentDay == currentDateTimeHK.day;
 
           List<CalendarClass> events = filteredClassEvents[currentDay] ?? [];
-          days.add(
-            _buildCalendarCell(currentDay, false, events, isToday: isToday),
-          );
+          days.add(_buildCalendarCell(currentDay, false, events, isToday: isToday));
           currentDay++;
         } else {
-          // Next month's days
           days.add(_buildCalendarCell(nextMonthDay, true, []));
           nextMonthDay++;
         }
       }
 
-      weeks.add(
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: days),
-      );
+      weeks.add(Row(crossAxisAlignment: CrossAxisAlignment.start, children: days));
     }
 
     return Column(children: weeks);
   }
 
-  Widget _buildCalendarCell(
-    int day,
-    bool isOtherMonth,
-    List<CalendarClass> events, {
-    bool isToday = false,
-  }) {
+  Widget _buildCalendarCell(int day, bool isOtherMonth, List<CalendarClass> events, {bool isToday = false}) {
     return Expanded(
       child: Container(
         height: 140,
@@ -733,7 +795,6 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         ),
         child: Stack(
           children: [
-            // Day number
             Positioned(
               top: 8,
               left: 8,
@@ -741,10 +802,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                 width: 24,
                 height: 24,
                 decoration: isToday
-                    ? BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      )
+                    ? BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)
                     : null,
                 child: Center(
                   child: Text(
@@ -755,15 +813,13 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                       color: isToday
                           ? Colors.white
                           : isOtherMonth
-                          ? AppColors.textSecondary.withOpacity(0.4)
-                          : AppColors.textSecondary,
+                              ? AppColors.textSecondary.withOpacity(0.4)
+                              : AppColors.textSecondary,
                     ),
                   ),
                 ),
               ),
             ),
-
-            // Events - SOLID COLORED CARDS WITH SCROLL
             if (events.isNotEmpty)
               Positioned(
                 top: 36,
@@ -807,15 +863,14 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: event.status == 'Canceled'
-              ? Color(0xFFB71C1C) // Dark red for canceled
-              : Color.fromARGB(255, 37, 120, 228), // Dark blue for scheduled
+              ? Color(0xFFB71C1C)
+              : Color.fromARGB(255, 37, 120, 228),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Class Code
             Text(
               event.classCode,
               style: TextStyle(
@@ -828,12 +883,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               maxLines: 1,
             ),
             const SizedBox(height: 2),
-            // Time
             Text(
               event.time,
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.white, // Light blue for time
+                color: Colors.white,
                 height: 1.1,
               ),
               maxLines: 1,
@@ -847,24 +901,15 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
   String _getMonthName(int month) {
     const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return months[month - 1];
   }
 }
 
 class CalendarClass {
+  final String courseId;
   final String schoolName;
   final String time;
   final String classCode;
@@ -875,6 +920,7 @@ class CalendarClass {
   final String notes;
 
   CalendarClass({
+    required this.courseId,
     required this.schoolName,
     required this.time,
     required this.classCode,

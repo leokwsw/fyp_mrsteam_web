@@ -14,13 +14,73 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _successMessage;
 
-  void _handleResetPassword() {
-    // TODO: Implement reset password logic
-    print('Email: ${_emailController.text}');
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  Future<void> _handleResetPassword() async {
+    // Validate email
+    final email = _emailController.text.trim();
     
-    // Navigate to Set New Password screen
-    context.push('/set-new-password');
+    if (email.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your email address';
+        _successMessage = null;
+      });
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      setState(() {
+        _errorMessage = 'Please enter a valid email address';
+        _successMessage = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+
+    try {
+      // TODO: Implement API call when backend endpoint is available
+      // Example:
+      // final authProvider = getIt<ApiProviderAuth>();
+      // final response = await authProvider.resetPassword(
+      //   ResetPasswordReq(email: email),
+      // );
+      
+      // Simulate API call delay for now
+      await Future.delayed(const Duration(seconds: 1));
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _successMessage = 'Password reset link sent to $email';
+        });
+        
+        // Navigate to Set New Password screen after a short delay
+        // In production, user would click a link in their email
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            context.push('/set-new-password', extra: {'email': email});
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to send reset link. Please try again.';
+        });
+      }
+    }
   }
 
   @override
@@ -38,7 +98,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back),
-                      onPressed: () => context.pop(),
+                      onPressed: _isLoading ? null : () => context.pop(),
                     ),
                     Icon(Icons.school, size: 28),
                     const SizedBox(width: 8),
@@ -81,6 +141,42 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                         const SizedBox(height: 48),
 
+                        // Error Message
+                        if (_errorMessage != null)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(color: Colors.red.shade700),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+
+                        // Success Message
+                        if (_successMessage != null)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Text(
+                              _successMessage!,
+                              style: TextStyle(color: Colors.green.shade700),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+
                         // Email Field
                         CustomTextField(
                           label: 'Email Address',
@@ -91,14 +187,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                         // Send Reset Link Button
                         CustomButton(
-                          text: 'Send Reset Link',
-                          onPressed: _handleResetPassword,
+                          text: _isLoading ? 'Sending...' : 'Send Reset Link',
+                          onPressed: _isLoading ? () {} : () => _handleResetPassword(),
                         ),
                         const SizedBox(height: 16),
 
                         // Back to Login Link
                         TextButton(
-                          onPressed: () => context.pop(),
+                          onPressed: _isLoading ? null : () => context.pop(),
                           child: Text(
                             'Back to Login',
                             style: AppTextStyles.link,

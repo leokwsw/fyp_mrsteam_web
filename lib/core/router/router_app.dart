@@ -1,4 +1,3 @@
-// lib/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:fyp_mrsteam_web/core/util/app_preferences.dart';
 import 'package:fyp_mrsteam_web/screens/attendance_screen.dart';
@@ -46,7 +45,13 @@ class AppRouter {
         GoRoute(
           path: '/set-new-password',
           name: 'set-new-password',
-          builder: (context, state) => const SetNewPasswordScreen(),
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            return SetNewPasswordScreen(
+              email: extra?['email'],
+              resetToken: extra?['resetToken'],
+            );
+          },
         ),
         GoRoute(
           path: '/class',
@@ -106,18 +111,18 @@ class AppRouter {
             child: const HomePage(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  final offsetTween = Tween<Offset>(
-                    begin: const Offset(0.06, 0),
-                    end: Offset.zero,
-                  ).chain(CurveTween(curve: Curves.easeOutCubic));
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: animation.drive(offsetTween),
-                      child: child,
-                    ),
-                  );
-                },
+              final offsetTween = Tween<Offset>(
+                begin: const Offset(0.06, 0),
+                end: Offset.zero,
+              ).chain(CurveTween(curve: Curves.easeOutCubic));
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: animation.drive(offsetTween),
+                  child: child,
+                ),
+              );
+            },
           ),
         ),
       ],

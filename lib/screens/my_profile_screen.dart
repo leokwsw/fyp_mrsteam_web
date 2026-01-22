@@ -1,23 +1,87 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_button.dart';
-import 'change_password_screen.dart';
+import '../core/config/get_it.dart';
+import '../data/api/api_provider_users.dart';
+import '../data/model/response/res_user.dart';
 
-class MyProfileScreen extends StatelessWidget {
+class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({Key? key}) : super(key: key);
 
   @override
+  State<MyProfileScreen> createState() => _MyProfileScreenState();
+}
+
+class _MyProfileScreenState extends State<MyProfileScreen> {
+  final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
+
+  UserResponse? user;
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final response = await _usersApi.getProfile();
+      setState(() {
+        user = response;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  String _capitalizeFirst(String? text) {
+    if (text == null || text.isEmpty) return '-';
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Sample user data (current logged-in user)
-    final user = {
-      'userId': 'A001',
-      'name': 'Olivia Bennett',
-      'role': 'Admin',
-      'email': 'olivia.bennett@email.com',
-      'phone': '(555) 987-6543',
-      'address': '123 Oak Street, Anytown, USA',
-    };
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBarWidget(currentRoute: '/myprofile'),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBarWidget(currentRoute: '/myprofile'),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error loading profile'),
+              const SizedBox(height: 8),
+              Text(errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _loadProfile, child: Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -28,13 +92,23 @@ class MyProfileScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title
-              Text(
-                'My Profile',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                ),
+              // Title with Refresh
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'My Profile',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.refresh),
+                    onPressed: _loadProfile,
+                    tooltip: 'Refresh',
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
 
@@ -44,25 +118,42 @@ class MyProfileScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Color(0xFFFFA07A),
-                    child: Icon(Icons.person, size: 50, color: Colors.white),
+                    child: Text(
+                      user?.name.isNotEmpty == true 
+                          ? user!.name[0].toUpperCase() 
+                          : 'U',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 24),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        user['userId'] as String,
+                        user?.username ?? user?.id ?? '-',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        user['role'] as String,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppColors.primary,
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _capitalizeFirst(user?.role),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -81,9 +172,26 @@ class MyProfileScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildInfoRow('Full Name', user['name'] as String, 'Contact Number', user['phone'] as String),
+                    _buildInfoRow(
+                      'Full Name',
+                      user?.name ?? '-',
+                      'Username',
+                      user?.username ?? '-',
+                    ),
                     const Divider(height: 32),
-                    _buildInfoRow('Email', user['email'] as String, 'Address', user['address'] as String),
+                    _buildInfoRow(
+                      'Email',
+                      user?.email ?? '-',
+                      'Status',
+                      user?.isActive == true ? 'Active' : 'Inactive',
+                    ),
+                    const Divider(height: 32),
+                    _buildInfoRow(
+                      'Created At',
+                      _formatDate(user?.createdAt),
+                      'Last Updated',
+                      _formatDate(user?.updatedAt),
+                    ),
                   ],
                 ),
               ),
@@ -97,10 +205,7 @@ class MyProfileScreen extends StatelessWidget {
                   child: CustomButton(
                     text: 'Change Password',
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
-                      );
+                      context.go('/myprofile/changepassword');
                     },
                   ),
                 ),
@@ -110,6 +215,16 @@ class MyProfileScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return '-';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateString;
+    }
   }
 
   Widget _buildInfoRow(String label1, String value1, String label2, String value2) {

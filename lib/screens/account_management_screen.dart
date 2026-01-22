@@ -4,6 +4,9 @@ import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/custom_button.dart';
+import '../core/config/get_it.dart';
+import '../data/api/api_provider_users.dart';
+import '../data/model/response/res_user.dart';
 
 class AccountManagementScreen extends StatefulWidget {
   const AccountManagementScreen({Key? key}) : super(key: key);
@@ -14,17 +17,48 @@ class AccountManagementScreen extends StatefulWidget {
 
 class _AccountManagementScreenState extends State<AccountManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
+  
   String? selectedRole;
   String? selectedStatus;
   String searchQuery = '';
+  
+  List<UserResponse> users = [];
+  bool isLoading = true;
+  String? errorMessage;
 
-  final List<Map<String, dynamic>> users = [
-    {'userId': 'T001', 'name': 'Ethan Walker', 'email': 'ethan.walker@email.com', 'role': 'Tutor', 'status': 'Inactive'},
-    {'userId': 'T002', 'name': 'Sophia Carter', 'email': 'sophia.carter@email.com', 'role': 'Tutor', 'status': 'Active'},
-    {'userId': 'A001', 'name': 'Liam Harper', 'email': 'liam.harper@email.com', 'role': 'Admin', 'status': 'Active'},
-    {'userId': 'T003', 'name': 'Olivia Foster', 'email': 'olivia.foster@email.com', 'role': 'Tutor', 'status': 'Active'},
-    {'userId': 'T004', 'name': 'Noah Brooks', 'email': 'noah.brooks@email.com', 'role': 'Tutor', 'status': 'Active'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final response = await _usersApi.getUsers(
+        search: searchQuery.isNotEmpty ? searchQuery : null,
+        role: (selectedRole != null && selectedRole != 'All') ? selectedRole!.toLowerCase() : null,
+        isActive: (selectedStatus != null && selectedStatus != 'All') 
+            ? (selectedStatus == 'Active' ? 'true' : 'false') 
+            : null,
+      );
+      
+      setState(() {
+        users = response.items;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +102,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                   setState(() {
                     searchQuery = value.toLowerCase();
                   });
+                  // Debounce search - reload after user stops typing
+                  Future.delayed(Duration(milliseconds: 500), () {
+                    if (searchQuery == value.toLowerCase()) {
+                      _loadUsers();
+                    }
+                  });
                 },
                 decoration: InputDecoration(
                   hintText: 'Search User',
@@ -98,21 +138,59 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     'Account Role',
                     selectedRole,
                     ['All', 'Admin', 'Tutor'],
-                    (value) => setState(() => selectedRole = value),
+                    (value) {
+                      setState(() => selectedRole = value);
+                      _loadUsers();
+                    },
                   ),
                   const SizedBox(width: 16),
                   _buildFilterDropdown(
                     'Status',
                     selectedStatus,
                     ['All', 'Active', 'Inactive'],
-                    (value) => setState(() => selectedStatus = value),
+                    (value) {
+                      setState(() => selectedStatus = value);
+                      _loadUsers();
+                    },
+                  ),
+                  const Spacer(),
+                  // Refresh Button
+                  IconButton(
+                    icon: Icon(Icons.refresh),
+                    onPressed: _loadUsers,
+                    tooltip: 'Refresh',
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Users Table
-              _buildUsersTable(),
+              // Content: Loading, Error, or Table
+              if (isLoading)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (errorMessage != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error loading users', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        Text(errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
+                        const SizedBox(height: 16),
+                        CustomButton(text: 'Retry', onPressed: _loadUsers),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                _buildUsersTable(),
             ],
           ),
         ),
@@ -158,6 +236,26 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   }
 
   Widget _buildUsersTable() {
+    if (users.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.people_outline, size: 48, color: AppColors.textSecondary),
+              const SizedBox(height: 16),
+              Text('No users found', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -183,31 +281,20 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
             ),
           ),
           // Table Rows
-          ...users.where((user) {
-            bool matchesSearch = searchQuery.isEmpty ||
-                user['name'].toLowerCase().contains(searchQuery) ||
-                user['email'].toLowerCase().contains(searchQuery) ||
-                user['userId'].toLowerCase().contains(searchQuery);
-            
-            bool matchesRole = selectedRole == null || 
-                selectedRole == 'All' || 
-                user['role'] == selectedRole;
-            
-            bool matchesStatus = selectedStatus == null || 
-                selectedStatus == 'All' || 
-                user['status'] == selectedStatus;
-            
-            return matchesSearch && matchesRole && matchesStatus;
-          }).map((user) => _buildUserRow(user)),
+          ...users.map((user) => _buildUserRow(user)),
         ],
       ),
     );
   }
 
-  Widget _buildUserRow(Map<String, dynamic> user) {
+  Widget _buildUserRow(UserResponse user) {
+    final bool isActive = user.isActive ?? false;
+    final String status = isActive ? 'Active' : 'Inactive';
+    final String displayRole = _capitalizeFirst(user.role ?? 'Unknown');
+    
     return InkWell(
       onTap: () {
-        context.go('/account/user/${user['userId']}');
+        context.go('/account/user/${user.id}');
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -218,30 +305,30 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           children: [
             Expanded(
               flex: 2,
-              child: Text(user['userId'], style: _cellStyle()),
+              child: Text(user.username ?? user.id ?? '-', style: _cellStyle()),
             ),
             Expanded(
               flex: 3,
-              child: Text(user['name'], style: _cellStyle()),
+              child: Text(user.name, style: _cellStyle()),
             ),
             Expanded(
               flex: 4,
               child: Text(
-                user['email'],
+                user.email,
                 style: _cellStyle().copyWith(color: AppColors.textSecondary),
               ),
             ),
             Expanded(
               flex: 2,
-              child: Text(user['role'], style: _cellStyle()),
+              child: Text(displayRole, style: _cellStyle()),
             ),
             Expanded(
               flex: 2,
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: StatusBadge(
-                  text: user['status'],
-                  type: user['status'] == 'Active' ? StatusType.success : StatusType.error,
+                  text: status,
+                  type: isActive ? StatusType.success : StatusType.error,
                 ),
               ),
             ),
@@ -249,6 +336,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         ),
       ),
     );
+  }
+
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
   }
 
   TextStyle _headerStyle() {
