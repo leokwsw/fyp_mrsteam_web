@@ -7,7 +7,10 @@ part of 'res_common_message.dart';
 // **************************************************************************
 
 CommonMessage _$CommonMessageFromJson(Map<String, dynamic> json) =>
-    CommonMessage(json['message'] as String);
+    $checkedCreate('CommonMessage', json, ($checkedConvert) {
+      final val = CommonMessage($checkedConvert('message', (v) => v as String));
+      return val;
+    });
 
 Map<String, dynamic> _$CommonMessageToJson(CommonMessage instance) =>
     <String, dynamic>{'message': instance.message};

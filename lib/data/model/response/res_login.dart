@@ -25,7 +25,9 @@ class LoginRes {
     this.message,
   );
 
-  factory LoginRes.fromJson(Map<String, dynamic> json) => _$LoginResFromJson(json);
+  factory LoginRes.fromJson(Map<String, dynamic> json) =>
+      _$LoginResFromJson(json);
+
   Map<String, dynamic> toJson() => _$LoginResToJson(this);
 
   static fromJsonModel(Map<String, dynamic> json) => LoginRes.fromJson(json);
