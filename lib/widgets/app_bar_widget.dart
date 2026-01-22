@@ -21,15 +21,21 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Logo
-          Row(
-            children: [
-              Icon(Icons.school, size: 28),
-              const SizedBox(width: 12),
-              Text(
-                'TutorTrack',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-            ],
+          GestureDetector(
+            onTap: () => context.go('/dashboard'),
+            child: Row(
+              children: [
+                Icon(Icons.school, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'TutorTrack',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
 
           // Navigation Links
@@ -55,17 +61,17 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(width: 40),
               _NavLink(
                 text: 'Account',
-                isActive: currentRoute == '/account',
-                onTap: () {
-                  // Navigate to account
-                  // context.go('/account');
-                },
+                isActive: currentRoute.contains('/account'),
+                onTap: () => context.go('/account'),
               ),
               const SizedBox(width: 20),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.primary,
-                child: Icon(Icons.person, color: Colors.white),
+              GestureDetector(
+                onTap: () => context.go('/myprofile'),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.primary,
+                  child: Icon(Icons.person, color: Colors.white),
+                ),
               ),
             ],
           ),

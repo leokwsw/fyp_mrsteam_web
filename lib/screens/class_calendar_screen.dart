@@ -833,7 +833,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               event.time,
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.white, // for time
+                color: Colors.white, // Light blue for time
                 height: 1.1,
               ),
               maxLines: 1,

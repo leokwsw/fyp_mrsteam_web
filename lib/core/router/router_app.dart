@@ -9,6 +9,11 @@ import 'package:fyp_mrsteam_web/screens/class_calendar_screen.dart';
 import 'package:fyp_mrsteam_web/screens/class_list_screen.dart';
 import 'package:fyp_mrsteam_web/screens/create_class_screen.dart';
 import 'package:fyp_mrsteam_web/screens/dashboard_screen.dart';
+import 'package:fyp_mrsteam_web/screens/account_management_screen.dart';
+import 'package:fyp_mrsteam_web/screens/add_new_user_screen.dart';
+import 'package:fyp_mrsteam_web/screens/user_profile_screen.dart';
+import 'package:fyp_mrsteam_web/screens/my_profile_screen.dart';
+import 'package:fyp_mrsteam_web/screens/change_password_screen.dart';
 import 'package:fyp_mrsteam_web/ui/page/page_home.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,17 +25,9 @@ class AppRouter {
   }
 
   GoRouter _createRouter() {
-    // final auth = getIt<AuthNotifier>();
-
     return GoRouter(
       initialLocation: '/',
-      // refreshListenable: auth,              // auth 變化時觸發 redirect
       routes: [
-        // GoRoute(
-        //   path: '/',
-        //   name: 'splash',
-        //   builder: (context, state) => const SplashPage(),
-        // ),
         GoRoute(
           path: '/',
           name: 'login',
@@ -71,29 +68,36 @@ class AppRouter {
           name: 'attendance',
           builder: (context, state) => const AttendanceScreen(),
         ),
-        // GoRoute(
-        //   path: '/login',
-        //   name: 'login',
-        //   pageBuilder: (context, state) => CustomTransitionPage(
-        //     key: state.pageKey,
-        //     child: const LoginPage(),
-        //     transitionsBuilder:
-        //         (context, animation, secondaryAnimation, child) {
-        //           final offsetTween = Tween<Offset>(
-        //             begin: const Offset(0, 0.04),
-        //             end: Offset.zero,
-        //           ).chain(CurveTween(curve: Curves.easeOutCubic));
-        //           return FadeTransition(
-        //             opacity: animation,
-        //             child: SlideTransition(
-        //               position: animation.drive(offsetTween),
-        //               child: child,
-        //             ),
-        //           );
-        //         },
-        //     transitionDuration: const Duration(milliseconds: 280),
-        //   ),
-        // ),
+        // Account Management Routes
+        GoRoute(
+          path: '/account',
+          name: 'account',
+          builder: (context, state) => const AccountManagementScreen(),
+        ),
+        GoRoute(
+          path: '/account/new',
+          name: 'account-new',
+          builder: (context, state) => const AddNewUserScreen(),
+        ),
+        GoRoute(
+          path: '/account/user/:userId',
+          name: 'user-profile',
+          builder: (context, state) {
+            final userId = state.pathParameters['userId'] ?? '';
+            return UserProfileScreen(userId: userId);
+          },
+        ),
+        // My Profile Routes
+        GoRoute(
+          path: '/myprofile',
+          name: 'myprofile',
+          builder: (context, state) => const MyProfileScreen(),
+        ),
+        GoRoute(
+          path: '/myprofile/changepassword',
+          name: 'change-password',
+          builder: (context, state) => const ChangePasswordScreen(),
+        ),
         GoRoute(
           path: '/home',
           name: 'home',
@@ -114,27 +118,9 @@ class AppRouter {
                     ),
                   );
                 },
-            // transitionDuration: const Duration(milliseconds: 300),
           ),
         ),
       ],
-      // redirect: (context, state) {
-      //   final atSplash = state.fullPath == '/';
-
-      //   // print(atSplash);
-
-      //   final hasAll =
-      //       AppPreferences.getAccessToken().isNotEmpty &&
-      //       AppPreferences.getRefreshToken().isNotEmpty &&
-      //       AppPreferences.getSessionId().isNotEmpty &&
-      //       AppPreferences.getUserId().isNotEmpty;
-
-      //   if (hasAll) {
-      //     return '/';
-      //   } else {
-      //     return '/';
-      //   }
-      // },
     );
   }
 }
