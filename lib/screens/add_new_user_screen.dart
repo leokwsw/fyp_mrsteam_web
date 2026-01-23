@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
+import '../core/config/get_it.dart';
+import '../data/api/api_provider_users.dart';
+import '../data/model/request/req_user.dart';
 import 'dart:math';
 
 class AddNewUserScreen extends StatefulWidget {
@@ -18,12 +22,15 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _qualificationsController = TextEditingController();
+  final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
   
   String? selectedDepartment;
   String selectedRole = 'Tutor';
-  String generatedUserId = 'T001';
+  String generatedUsername = '';
   String generatedPassword = '';
   bool showPassword = false;
+  bool isLoading = false;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -39,16 +46,16 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
       Iterable.generate(8, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
     );
     
-    // Generate User ID based on role
-    _updateUserId();
+    // Generate Username based on role
+    _updateUsername();
   }
 
-  void _updateUserId() {
+  void _updateUsername() {
     setState(() {
       if (selectedRole == 'Admin') {
-        generatedUserId = 'A${(Random().nextInt(900) + 100).toString().padLeft(3, '0')}';
+        generatedUsername = 'A${(Random().nextInt(900) + 100).toString().padLeft(3, '0')}';
       } else {
-        generatedUserId = 'T${(Random().nextInt(900) + 100).toString().padLeft(3, '0')}';
+        generatedUsername = 'T${(Random().nextInt(900) + 100).toString().padLeft(3, '0')}';
       }
     });
   }
@@ -57,6 +64,131 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$label copied to clipboard')),
+    );
+  }
+
+  Future<void> _saveUser() async {
+    // Validate required fields
+    if (_fullNameController.text.trim().isEmpty) {
+      _showError('Please enter full name');
+      return;
+    }
+    if (_emailController.text.trim().isEmpty) {
+      _showError('Please enter email address');
+      return;
+    }
+    if (!_isValidEmail(_emailController.text.trim())) {
+      _showError('Please enter a valid email address');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final request = CreateUserReq(
+        _emailController.text.trim(),
+        generatedPassword,
+        _fullNameController.text.trim(),
+        username: generatedUsername,
+        role: selectedRole.toLowerCase(),
+      );
+
+      await _usersApi.createUser(request);
+
+      if (mounted) {
+        // Show success dialog with credentials
+        _showSuccessDialog();
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+      _showError('Failed to create user: ${e.toString()}');
+    }
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            const SizedBox(width: 12),
+            Text('User Created Successfully'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Please save these credentials:'),
+            const SizedBox(height: 16),
+            _buildCredentialRow('Username', generatedUsername),
+            const SizedBox(height: 8),
+            _buildCredentialRow('Password', generatedPassword),
+            const SizedBox(height: 16),
+            Text(
+              'Note: The user should change their password after first login.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/account');
+            },
+            child: Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCredentialRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: Row(
+        children: [
+          Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600)),
+          Expanded(child: Text(value)),
+          IconButton(
+            icon: Icon(Icons.copy, size: 18),
+            onPressed: () => _copyToClipboard(value, label),
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -88,7 +220,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
 
                   // Full Name
                   CustomTextField(
-                    label: 'Full Name',
+                    label: 'Full Name *',
                     placeholder: 'Enter full name',
                     controller: _fullNameController,
                   ),
@@ -104,7 +236,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
 
                   // Email Address
                   CustomTextField(
-                    label: 'Email Address',
+                    label: 'Email Address *',
                     placeholder: 'Enter email address',
                     controller: _emailController,
                   ),
@@ -171,14 +303,14 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                     (value) {
                       setState(() {
                         selectedRole = value!;
-                        _updateUserId();
+                        _updateUsername();
                       });
                     },
                   ),
                   const SizedBox(height: 24),
 
-                  // User ID
-                  _buildReadOnlyFieldWithCopy('User ID', generatedUserId),
+                  // Username
+                  _buildReadOnlyFieldWithCopy('Username', generatedUsername),
                   const SizedBox(height: 24),
 
                   // Password
@@ -192,7 +324,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                       SizedBox(
                         width: 120,
                         child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: isLoading ? null : () => context.go('/account'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.textPrimary,
@@ -207,14 +339,8 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                       SizedBox(
                         width: 120,
                         child: CustomButton(
-                          text: 'Save',
-                          onPressed: () {
-                            // Save user logic
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('User created successfully')),
-                            );
-                          },
+                          text: isLoading ? 'Saving...' : 'Save',
+                          onPressed: isLoading ? () {} : () => _saveUser(),
                         ),
                       ),
                     ],

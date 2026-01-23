@@ -4,6 +4,13 @@ import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
+import '../core/config/get_it.dart';
+import '../data/api/api_provider_course.dart';
+import '../data/api/api_provider_school.dart';
+import '../data/api/api_provider_users.dart';
+import '../data/model/request/req_course.dart';
+import '../data/model/response/res_school.dart';
+import '../data/model/response/res_user.dart';
 
 class CreateClassScreen extends StatefulWidget {
   const CreateClassScreen({Key? key}) : super(key: key);
@@ -13,17 +20,162 @@ class CreateClassScreen extends StatefulWidget {
 }
 
 class _CreateClassScreenState extends State<CreateClassScreen> {
-  final TextEditingController _classCodeController = TextEditingController();
+  final ApiProviderCourse _courseApi = getIt<ApiProviderCourse>();
+  final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
+  final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
+
   final TextEditingController _classNameController = TextEditingController();
+  final TextEditingController _roomController = TextEditingController();
   final TextEditingController _startTimeController = TextEditingController();
   final TextEditingController _endTimeController = TextEditingController();
-  final TextEditingController _notificationController = TextEditingController();
+  final TextEditingController _overviewController = TextEditingController();
 
-  String? selectedSchool;
-  String? selectedTutor;
+  String? selectedSchoolId;
+  String? selectedTutorId;
+  DateTime? startDateTime;
+  DateTime? endDateTime;
+
+  List<SchoolRes> schools = [];
+  List<UserResponse> tutors = [];
+  List<String> uploadedFiles = [];
+
+  bool isLoading = true;
+  bool isSaving = false;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final futures = await Future.wait([
+        _schoolApi.getSchools(),
+        _usersApi.getUsers(role: 'tutor'),
+      ]);
+
+      final schoolsRes = futures[0] as SchoolListRes;
+      final tutorsRes = futures[1] as dynamic;
+
+      setState(() {
+        schools = schoolsRes.items;
+        tutors = tutorsRes.items;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveClass() async {
+    // Validate required fields
+    if (_classNameController.text.trim().isEmpty) {
+      _showError('Please enter class name');
+      return;
+    }
+    if (selectedSchoolId == null) {
+      _showError('Please select a school');
+      return;
+    }
+    if (selectedTutorId == null) {
+      _showError('Please select a tutor');
+      return;
+    }
+    if (startDateTime == null || endDateTime == null) {
+      _showError('Please set start and end time');
+      return;
+    }
+    if (endDateTime!.isBefore(startDateTime!)) {
+      _showError('End time must be after start time');
+      return;
+    }
+
+    setState(() => isSaving = true);
+
+    try {
+      final timestamp = CourseTimestampReq(
+        startDateTime!.millisecondsSinceEpoch,
+        endDateTime!.millisecondsSinceEpoch,
+      );
+
+      final request = CreateCourseReq(
+        _classNameController.text.trim(),
+        _overviewController.text.trim(),
+        _roomController.text.trim(),
+        uploadedFiles,
+        selectedSchoolId!,
+        selectedTutorId!,
+        [timestamp],
+      );
+
+      await _courseApi.createCourse(request);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Class created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.go('/class');
+      }
+    } catch (e) {
+      _showError('Failed to create class: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => isSaving = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBarWidget(currentRoute: '/class/create'),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBarWidget(currentRoute: '/class/create'),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error loading data'),
+              const SizedBox(height: 8),
+              ElevatedButton(onPressed: _loadData, child: Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBarWidget(currentRoute: '/class/create'),
@@ -36,7 +188,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Page Title
                   Center(
                     child: Text(
                       'Create New Class',
@@ -48,52 +199,48 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Class Code
-                  CustomTextField(
-                    label: 'Class Code',
-                    placeholder: 'C001',
-                    controller: _classCodeController,
-                  ),
-                  const SizedBox(height: 24),
-
                   // Class Name
                   CustomTextField(
-                    label: 'Class Name',
+                    label: 'Class Name *',
                     placeholder: 'e.g., Math 101',
                     controller: _classNameController,
                   ),
                   const SizedBox(height: 24),
 
+                  // Room
+                  CustomTextField(
+                    label: 'Room',
+                    placeholder: 'e.g., Room 301',
+                    controller: _roomController,
+                  ),
+                  const SizedBox(height: 24),
+
                   // Start Date and Time
-                  _buildDateTimeField('Start Date and Time', _startTimeController),
+                  _buildDateTimeField('Start Date and Time *', _startTimeController, (dt) {
+                    startDateTime = dt;
+                  }),
                   const SizedBox(height: 24),
 
                   // End Date and Time
-                  _buildDateTimeField('End Date and Time', _endTimeController),
+                  _buildDateTimeField('End Date and Time *', _endTimeController, (dt) {
+                    endDateTime = dt;
+                  }),
                   const SizedBox(height: 24),
 
                   // School Dropdown
-                  _buildDropdown('School', 'Select School', selectedSchool, (value) {
-                    setState(() {
-                      selectedSchool = value;
-                    });
-                  }),
+                  _buildSchoolDropdown(),
                   const SizedBox(height: 24),
 
                   // Tutor Dropdown
-                  _buildDropdown('Tutor', 'Select Tutor', selectedTutor, (value) {
-                    setState(() {
-                      selectedTutor = value;
-                    });
-                  }),
+                  _buildTutorDropdown(),
                   const SizedBox(height: 24),
 
-                  // Notification Content
+                  // Overview / Notification Content
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Notification Content',
+                        'Overview / Notification Content',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -101,10 +248,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextField(
-                        controller: _notificationController,
+                        controller: _overviewController,
                         maxLines: 4,
                         decoration: InputDecoration(
-                          hintText: 'Customize the content for automated notifications sent to tutors regarding class schedules, material updates, etc.',
+                          hintText: 'Class description and notification content for tutors',
                           hintStyle: TextStyle(
                             color: AppColors.textSecondary.withOpacity(0.6),
                             fontSize: 14,
@@ -155,31 +302,48 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                'Drag and drop files here or browse to upload PPTs, worksheets, and\nother materials for tutors.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  // Handle file upload
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: AppColors.textPrimary,
-                                  elevation: 0,
-                                  side: BorderSide(color: AppColors.inputBorder),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 12,
+                              if (uploadedFiles.isEmpty) ...[
+                                Text(
+                                  'Drag and drop files here or browse to upload PPTs, worksheets, and\nother materials for tutors.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
                                   ),
                                 ),
-                                child: Text('Browse Files'),
-                              ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    // TODO: Implement file upload
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('File upload not implemented yet')),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: AppColors.textPrimary,
+                                    elevation: 0,
+                                    side: BorderSide(color: AppColors.inputBorder),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: Text('Browse Files'),
+                                ),
+                              ] else ...[
+                                Text(
+                                  '${uploadedFiles.length} file(s) selected',
+                                  style: TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() => uploadedFiles.clear());
+                                  },
+                                  child: Text('Clear Files'),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -195,7 +359,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       SizedBox(
                         width: 120,
                         child: ElevatedButton(
-                          onPressed: () => context.pop(),
+                          onPressed: isSaving ? null : () => context.go('/class'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.textPrimary,
@@ -209,13 +373,26 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       const SizedBox(width: 16),
                       SizedBox(
                         width: 120,
-                        child: CustomButton(
-                          text: 'Save',
-                          onPressed: () {
-                            // Handle save
-                            context.pop();
-                          },
-                        ),
+                        child: isSaving
+                            ? ElevatedButton(
+                                onPressed: null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                              )
+                            : CustomButton(
+                                text: 'Save',
+                                onPressed: () => _saveClass(),
+                              ),
                       ),
                     ],
                   ),
@@ -228,7 +405,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     );
   }
 
-  Widget _buildDateTimeField(String label, TextEditingController controller) {
+  Widget _buildDateTimeField(String label, TextEditingController controller, Function(DateTime) onSelected) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -262,7 +439,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ),
           ),
           onTap: () async {
-            // Show date/time picker
             DateTime? date = await showDatePicker(
               context: context,
               initialDate: DateTime.now(),
@@ -275,8 +451,16 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 initialTime: TimeOfDay.now(),
               );
               if (time != null) {
-                controller.text = 
+                final dateTime = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
+                );
+                controller.text =
                     '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                onSelected(dateTime);
               }
             }
           },
@@ -286,12 +470,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     );
   }
 
-  Widget _buildDropdown(String label, String hint, String? value, Function(String?) onChanged) {
+  Widget _buildSchoolDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          'School *',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -307,14 +491,56 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: value,
-              hint: Text(hint, style: TextStyle(color: AppColors.textSecondary)),
+              value: selectedSchoolId,
+              hint: Text('Select School', style: TextStyle(color: AppColors.textSecondary)),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
-              items: ['Option 1', 'Option 2', 'Option 3']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: onChanged,
+              items: schools.map((school) => DropdownMenuItem(
+                value: school.id,
+                child: Text(school.name),
+              )).toList(),
+              onChanged: (value) {
+                setState(() => selectedSchoolId = value);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTutorDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tutor *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.inputBackground,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.inputBorder),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedTutorId,
+              hint: Text('Select Tutor', style: TextStyle(color: AppColors.textSecondary)),
+              isExpanded: true,
+              icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
+              items: tutors.map((tutor) => DropdownMenuItem(
+                value: tutor.id,
+                child: Text(tutor.name),
+              )).toList(),
+              onChanged: (value) {
+                setState(() => selectedTutorId = value);
+              },
             ),
           ),
         ),
@@ -324,11 +550,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   @override
   void dispose() {
-    _classCodeController.dispose();
     _classNameController.dispose();
+    _roomController.dispose();
     _startTimeController.dispose();
     _endTimeController.dispose();
-    _notificationController.dispose();
+    _overviewController.dispose();
     super.dispose();
   }
 }
