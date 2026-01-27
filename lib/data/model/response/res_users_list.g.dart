@@ -6,19 +6,12 @@ part of 'res_users_list.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-UsersListRes _$UsersListResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('UsersListRes', json, ($checkedConvert) {
-      final val = UsersListRes(
-        $checkedConvert(
-          'items',
-          (v) => (v as List<dynamic>)
-              .map((e) => UserResponse.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-        $checkedConvert('total', (v) => (v as num).toInt()),
-      );
-      return val;
-    });
+UsersListRes _$UsersListResFromJson(Map<String, dynamic> json) => UsersListRes(
+  (json['items'] as List<dynamic>)
+      .map((e) => UserResponse.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  (json['total'] as num).toInt(),
+);
 
 Map<String, dynamic> _$UsersListResToJson(UsersListRes instance) =>
     <String, dynamic>{'items': instance.items, 'total': instance.total};

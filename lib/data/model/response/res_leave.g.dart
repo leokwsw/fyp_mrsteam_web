@@ -6,28 +6,20 @@ part of 'res_leave.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-LeaveRes _$LeaveResFromJson(Map<String, dynamic> json) => $checkedCreate(
-  'LeaveRes',
-  json,
-  ($checkedConvert) {
-    final val = LeaveRes(
-      $checkedConvert('tutorId', (v) => v as String),
-      $checkedConvert('reason', (v) => v as String),
-      $checkedConvert('startDate', (v) => v as String),
-      $checkedConvert('endDate', (v) => v as String),
-      $checkedConvert('status', (v) => v as String),
-      id: $checkedConvert('_id', (v) => v as String?),
-      courseId: $checkedConvert('courseId', (v) => v as String?),
-      approvedBy: $checkedConvert('approvedBy', (v) => v as String?),
-      approvedAt: $checkedConvert('approvedAt', (v) => v as String?),
-      rejectionReason: $checkedConvert('rejectionReason', (v) => v as String?),
-      isDeleted: $checkedConvert('isDeleted', (v) => v as bool?),
-      createdAt: $checkedConvert('createdAt', (v) => v as String?),
-      updatedAt: $checkedConvert('updatedAt', (v) => v as String?),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'id': '_id'},
+LeaveRes _$LeaveResFromJson(Map<String, dynamic> json) => LeaveRes(
+  json['tutorId'] as String,
+  json['reason'] as String,
+  json['startDate'] as String,
+  json['endDate'] as String,
+  json['status'] as String,
+  id: json['_id'] as String?,
+  courseId: json['courseId'] as String?,
+  approvedBy: json['approvedBy'] as String?,
+  approvedAt: json['approvedAt'] as String?,
+  rejectionReason: json['rejectionReason'] as String?,
+  isDeleted: json['isDeleted'] as bool?,
+  createdAt: json['createdAt'] as String?,
+  updatedAt: json['updatedAt'] as String?,
 );
 
 Map<String, dynamic> _$LeaveResToJson(LeaveRes instance) => <String, dynamic>{
@@ -46,22 +38,15 @@ Map<String, dynamic> _$LeaveResToJson(LeaveRes instance) => <String, dynamic>{
   'updatedAt': instance.updatedAt,
 };
 
-LeaveListRes _$LeaveListResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('LeaveListRes', json, ($checkedConvert) {
-      final val = LeaveListRes(
-        $checkedConvert(
-          'items',
-          (v) => (v as List<dynamic>)
-              .map((e) => LeaveRes.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-        $checkedConvert('total', (v) => (v as num).toInt()),
-        $checkedConvert('page', (v) => (v as num).toInt()),
-        $checkedConvert('limit', (v) => (v as num).toInt()),
-        $checkedConvert('pages', (v) => (v as num).toInt()),
-      );
-      return val;
-    });
+LeaveListRes _$LeaveListResFromJson(Map<String, dynamic> json) => LeaveListRes(
+  (json['items'] as List<dynamic>)
+      .map((e) => LeaveRes.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  (json['total'] as num).toInt(),
+  (json['page'] as num).toInt(),
+  (json['limit'] as num).toInt(),
+  (json['pages'] as num).toInt(),
+);
 
 Map<String, dynamic> _$LeaveListResToJson(LeaveListRes instance) =>
     <String, dynamic>{

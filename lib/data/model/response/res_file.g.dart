@@ -6,18 +6,14 @@ part of 'res_file.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-FileRes _$FileResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('FileRes', json, ($checkedConvert) {
-      final val = FileRes(
-        $checkedConvert('originalName', (v) => v as String),
-        $checkedConvert('filename', (v) => v as String),
-        $checkedConvert('path', (v) => v as String),
-        $checkedConvert('url', (v) => v as String),
-        $checkedConvert('size', (v) => v as num),
-        $checkedConvert('mimetype', (v) => v as String),
-      );
-      return val;
-    });
+FileRes _$FileResFromJson(Map<String, dynamic> json) => FileRes(
+  json['originalName'] as String,
+  json['filename'] as String,
+  json['path'] as String,
+  json['url'] as String,
+  json['size'] as num,
+  json['mimetype'] as String,
+);
 
 Map<String, dynamic> _$FileResToJson(FileRes instance) => <String, dynamic>{
   'originalName': instance.originalName,
@@ -29,16 +25,10 @@ Map<String, dynamic> _$FileResToJson(FileRes instance) => <String, dynamic>{
 };
 
 FileUploadRes _$FileUploadResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('FileUploadRes', json, ($checkedConvert) {
-      final val = FileUploadRes(
-        $checkedConvert('message', (v) => v as String),
-        $checkedConvert(
-          'file',
-          (v) => FileRes.fromJson(v as Map<String, dynamic>),
-        ),
-      );
-      return val;
-    });
+    FileUploadRes(
+      json['message'] as String,
+      FileRes.fromJson(json['file'] as Map<String, dynamic>),
+    );
 
 Map<String, dynamic> _$FileUploadResToJson(FileUploadRes instance) =>
     <String, dynamic>{'message': instance.message, 'file': instance.file};

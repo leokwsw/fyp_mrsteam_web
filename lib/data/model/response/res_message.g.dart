@@ -7,13 +7,7 @@ part of 'res_message.dart';
 // **************************************************************************
 
 MessageRes _$MessageResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('MessageRes', json, ($checkedConvert) {
-      final val = MessageRes(
-        $checkedConvert('success', (v) => v as bool),
-        $checkedConvert('message', (v) => v as String),
-      );
-      return val;
-    });
+    MessageRes(json['success'] as bool, json['message'] as String);
 
 Map<String, dynamic> _$MessageResToJson(MessageRes instance) =>
     <String, dynamic>{'success': instance.success, 'message': instance.message};

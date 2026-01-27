@@ -6,26 +6,13 @@ part of 'res_login.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-LoginRes _$LoginResFromJson(Map<String, dynamic> json) => $checkedCreate(
-  'LoginRes',
-  json,
-  ($checkedConvert) {
-    final val = LoginRes(
-      $checkedConvert('access_token', (v) => v as String),
-      $checkedConvert('refresh_token', (v) => v as String),
-      $checkedConvert('session_id', (v) => v as String),
-      $checkedConvert('expires_in', (v) => (v as num).toInt()),
-      $checkedConvert('user', (v) => User.fromJson(v as Map<String, dynamic>)),
-      $checkedConvert('message', (v) => v as String),
-    );
-    return val;
-  },
-  fieldKeyMap: const {
-    'accessToken': 'access_token',
-    'refreshToken': 'refresh_token',
-    'sessionId': 'session_id',
-    'expiresIn': 'expires_in',
-  },
+LoginRes _$LoginResFromJson(Map<String, dynamic> json) => LoginRes(
+  json['access_token'] as String,
+  json['refresh_token'] as String,
+  json['session_id'] as String,
+  (json['expires_in'] as num).toInt(),
+  User.fromJson(json['user'] as Map<String, dynamic>),
+  json['message'] as String,
 );
 
 Map<String, dynamic> _$LoginResToJson(LoginRes instance) => <String, dynamic>{

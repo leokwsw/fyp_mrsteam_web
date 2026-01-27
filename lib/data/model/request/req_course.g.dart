@@ -7,40 +7,23 @@ part of 'req_course.dart';
 // **************************************************************************
 
 CourseTimestampReq _$CourseTimestampReqFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('CourseTimestampReq', json, ($checkedConvert) {
-      final val = CourseTimestampReq(
-        $checkedConvert('start', (v) => v as num),
-        $checkedConvert('end', (v) => v as num),
-      );
-      return val;
-    });
+    CourseTimestampReq(json['start'] as num, json['end'] as num);
 
 Map<String, dynamic> _$CourseTimestampReqToJson(CourseTimestampReq instance) =>
     <String, dynamic>{'start': instance.start, 'end': instance.end};
 
 CreateCourseReq _$CreateCourseReqFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('CreateCourseReq', json, ($checkedConvert) {
-      final val = CreateCourseReq(
-        $checkedConvert('name', (v) => v as String),
-        $checkedConvert('overview', (v) => v as String),
-        $checkedConvert('room', (v) => v as String),
-        $checkedConvert(
-          'files',
-          (v) => (v as List<dynamic>).map((e) => e as String).toList(),
-        ),
-        $checkedConvert('schoolId', (v) => v as String),
-        $checkedConvert('tutorId', (v) => v as String),
-        $checkedConvert(
-          'timestamps',
-          (v) => (v as List<dynamic>)
-              .map(
-                (e) => CourseTimestampReq.fromJson(e as Map<String, dynamic>),
-              )
-              .toList(),
-        ),
-      );
-      return val;
-    });
+    CreateCourseReq(
+      json['name'] as String,
+      json['overview'] as String,
+      json['room'] as String,
+      (json['files'] as List<dynamic>).map((e) => e as String).toList(),
+      json['schoolId'] as String,
+      json['tutorId'] as String,
+      (json['timestamps'] as List<dynamic>)
+          .map((e) => CourseTimestampReq.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
 
 Map<String, dynamic> _$CreateCourseReqToJson(CreateCourseReq instance) =>
     <String, dynamic>{
@@ -54,28 +37,19 @@ Map<String, dynamic> _$CreateCourseReqToJson(CreateCourseReq instance) =>
     };
 
 UpdateCourseReq _$UpdateCourseReqFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('UpdateCourseReq', json, ($checkedConvert) {
-      final val = UpdateCourseReq(
-        name: $checkedConvert('name', (v) => v as String?),
-        overview: $checkedConvert('overview', (v) => v as String?),
-        room: $checkedConvert('room', (v) => v as String?),
-        files: $checkedConvert(
-          'files',
-          (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
-        ),
-        schoolId: $checkedConvert('schoolId', (v) => v as String?),
-        tutorId: $checkedConvert('tutorId', (v) => v as String?),
-        timestamps: $checkedConvert(
-          'timestamps',
-          (v) => (v as List<dynamic>?)
-              ?.map(
-                (e) => CourseTimestampReq.fromJson(e as Map<String, dynamic>),
-              )
-              .toList(),
-        ),
-      );
-      return val;
-    });
+    UpdateCourseReq(
+      name: json['name'] as String?,
+      overview: json['overview'] as String?,
+      room: json['room'] as String?,
+      files: (json['files'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      schoolId: json['schoolId'] as String?,
+      tutorId: json['tutorId'] as String?,
+      timestamps: (json['timestamps'] as List<dynamic>?)
+          ?.map((e) => CourseTimestampReq.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
 
 Map<String, dynamic> _$UpdateCourseReqToJson(UpdateCourseReq instance) =>
     <String, dynamic>{

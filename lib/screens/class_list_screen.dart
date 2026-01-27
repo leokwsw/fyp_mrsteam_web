@@ -11,6 +11,7 @@ import '../data/api/api_provider_users.dart';
 import '../data/model/response/res_course.dart';
 import '../data/model/response/res_school.dart';
 import '../data/model/response/res_user.dart';
+import '../data/model/request/req_school.dart';
 
 class ClassListScreen extends StatefulWidget {
   const ClassListScreen({Key? key}) : super(key: key);
@@ -113,6 +114,22 @@ class _ClassListScreenState extends State<ClassListScreen> {
         isLoading = false;
       });
     }
+  }
+
+  // Show Create School Dialog
+  void _showCreateSchoolDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateSchoolDialog(
+        onSchoolCreated: (newSchool) {
+          setState(() {
+            schoolOptions.add(newSchool);
+            schoolsMap[newSchool.id!] = newSchool;
+            selectedSchoolId = newSchool.id;
+          });
+        },
+      ),
+    );
   }
 
   // Get filtered class list
@@ -388,12 +405,28 @@ class _ClassListScreenState extends State<ClassListScreen> {
           icon: Container(),
           items: [
             DropdownMenuItem(value: null, child: Text('All Schools')),
+            DropdownMenuItem(
+              value: '__create_new__',
+              child: Row(
+                children: [
+                  Icon(Icons.add, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text('Create New School', style: TextStyle(fontSize: 14, color: AppColors.primary)),
+                ],
+              ),
+            ),
             ...schoolOptions.map((school) => DropdownMenuItem(
               value: school.id,
               child: Text(school.name, style: TextStyle(fontSize: 14)),
             )),
           ],
-          onChanged: (value) => setState(() => selectedSchoolId = value),
+          onChanged: (value) {
+            if (value == '__create_new__') {
+              _showCreateSchoolDialog();
+            } else {
+              setState(() => selectedSchoolId = value);
+            }
+          },
         ),
       ),
     );
@@ -705,4 +738,198 @@ class ClassListItem {
     required this.status,
     required this.startDateTime,
   });
+}
+
+// Create School Dialog
+class CreateSchoolDialog extends StatefulWidget {
+  final Function(SchoolRes) onSchoolCreated;
+
+  const CreateSchoolDialog({Key? key, required this.onSchoolCreated}) : super(key: key);
+
+  @override
+  State<CreateSchoolDialog> createState() => _CreateSchoolDialogState();
+}
+
+class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
+  final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
+  
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createSchool() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final request = CreateSchoolReq(
+        _nameController.text.trim(),
+        GpsLocation(
+          double.tryParse(_latitudeController.text) ?? 0.0,
+          double.tryParse(_longitudeController.text) ?? 0.0,
+        ),
+      );
+
+      final newSchool = await _schoolApi.createSchool(request);
+      widget.onSchoolCreated(newSchool);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Create New School',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // School Name
+              Text('School Name *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  hintText: 'Enter school name',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter school name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // GPS Coordinates
+              Text('GPS Coordinates (Optional)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _latitudeController,
+                      decoration: InputDecoration(
+                        hintText: 'Latitude',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _longitudeController,
+                      decoration: InputDecoration(
+                        hintText: 'Longitude',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                ],
+              ),
+              
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 24),
+              
+              // Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    child: Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _createSchool,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text('Create School', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

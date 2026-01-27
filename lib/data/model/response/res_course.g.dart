@@ -7,45 +7,25 @@ part of 'res_course.dart';
 // **************************************************************************
 
 CourseTimestampRes _$CourseTimestampResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('CourseTimestampRes', json, ($checkedConvert) {
-      final val = CourseTimestampRes(
-        $checkedConvert('start', (v) => v as num),
-        $checkedConvert('end', (v) => v as num),
-      );
-      return val;
-    });
+    CourseTimestampRes(json['start'] as num, json['end'] as num);
 
 Map<String, dynamic> _$CourseTimestampResToJson(CourseTimestampRes instance) =>
     <String, dynamic>{'start': instance.start, 'end': instance.end};
 
-CourseRes _$CourseResFromJson(Map<String, dynamic> json) => $checkedCreate(
-  'CourseRes',
-  json,
-  ($checkedConvert) {
-    final val = CourseRes(
-      $checkedConvert('name', (v) => v as String),
-      $checkedConvert('overview', (v) => v as String),
-      $checkedConvert('room', (v) => v as String),
-      $checkedConvert(
-        'files',
-        (v) => (v as List<dynamic>).map((e) => e as String).toList(),
-      ),
-      $checkedConvert('schoolId', (v) => v as String),
-      $checkedConvert('tutorId', (v) => v as String),
-      $checkedConvert(
-        'timestamps',
-        (v) => (v as List<dynamic>)
-            .map((e) => CourseTimestampRes.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      ),
-      id: $checkedConvert('_id', (v) => v as String?),
-      isDeleted: $checkedConvert('isDeleted', (v) => v as bool?),
-      createdAt: $checkedConvert('createdAt', (v) => v as String?),
-      updatedAt: $checkedConvert('updatedAt', (v) => v as String?),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'id': '_id'},
+CourseRes _$CourseResFromJson(Map<String, dynamic> json) => CourseRes(
+  json['name'] as String,
+  json['overview'] as String,
+  json['room'] as String,
+  (json['files'] as List<dynamic>).map((e) => e as String).toList(),
+  json['schoolId'] as String,
+  json['tutorId'] as String,
+  (json['timestamps'] as List<dynamic>)
+      .map((e) => CourseTimestampRes.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  id: json['_id'] as String?,
+  isDeleted: json['isDeleted'] as bool?,
+  createdAt: json['createdAt'] as String?,
+  updatedAt: json['updatedAt'] as String?,
 );
 
 Map<String, dynamic> _$CourseResToJson(CourseRes instance) => <String, dynamic>{
@@ -63,21 +43,15 @@ Map<String, dynamic> _$CourseResToJson(CourseRes instance) => <String, dynamic>{
 };
 
 CourseListRes _$CourseListResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('CourseListRes', json, ($checkedConvert) {
-      final val = CourseListRes(
-        $checkedConvert(
-          'items',
-          (v) => (v as List<dynamic>)
-              .map((e) => CourseRes.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-        $checkedConvert('total', (v) => (v as num).toInt()),
-        $checkedConvert('page', (v) => (v as num).toInt()),
-        $checkedConvert('limit', (v) => (v as num).toInt()),
-        $checkedConvert('pages', (v) => (v as num).toInt()),
-      );
-      return val;
-    });
+    CourseListRes(
+      (json['items'] as List<dynamic>)
+          .map((e) => CourseRes.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      (json['total'] as num).toInt(),
+      (json['page'] as num).toInt(),
+      (json['limit'] as num).toInt(),
+      (json['pages'] as num).toInt(),
+    );
 
 Map<String, dynamic> _$CourseListResToJson(CourseListRes instance) =>
     <String, dynamic>{
@@ -89,19 +63,13 @@ Map<String, dynamic> _$CourseListResToJson(CourseListRes instance) =>
     };
 
 CourseFilesRes _$CourseFilesResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('CourseFilesRes', json, ($checkedConvert) {
-      final val = CourseFilesRes(
-        $checkedConvert('courseId', (v) => v as String),
-        $checkedConvert('courseName', (v) => v as String),
-        $checkedConvert(
-          'files',
-          (v) => (v as List<dynamic>)
-              .map((e) => FileRes.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-      );
-      return val;
-    });
+    CourseFilesRes(
+      json['courseId'] as String,
+      json['courseName'] as String,
+      (json['files'] as List<dynamic>)
+          .map((e) => FileRes.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
 
 Map<String, dynamic> _$CourseFilesResToJson(CourseFilesRes instance) =>
     <String, dynamic>{

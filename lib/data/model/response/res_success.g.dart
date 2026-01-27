@@ -7,10 +7,7 @@ part of 'res_success.dart';
 // **************************************************************************
 
 SuccessRes _$SuccessResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('SuccessRes', json, ($checkedConvert) {
-      final val = SuccessRes($checkedConvert('success', (v) => v as bool));
-      return val;
-    });
+    SuccessRes(json['success'] as bool);
 
 Map<String, dynamic> _$SuccessResToJson(SuccessRes instance) =>
     <String, dynamic>{'success': instance.success};

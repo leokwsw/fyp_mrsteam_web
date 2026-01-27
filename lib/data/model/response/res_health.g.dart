@@ -6,16 +6,12 @@ part of 'res_health.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-HealthRes _$HealthResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('HealthRes', json, ($checkedConvert) {
-      final val = HealthRes(
-        $checkedConvert('status', (v) => v as String),
-        info: $checkedConvert('info', (v) => v as Map<String, dynamic>?),
-        error: $checkedConvert('error', (v) => v as Map<String, dynamic>?),
-        details: $checkedConvert('details', (v) => v as Map<String, dynamic>?),
-      );
-      return val;
-    });
+HealthRes _$HealthResFromJson(Map<String, dynamic> json) => HealthRes(
+  json['status'] as String,
+  info: json['info'] as Map<String, dynamic>?,
+  error: json['error'] as Map<String, dynamic>?,
+  details: json['details'] as Map<String, dynamic>?,
+);
 
 Map<String, dynamic> _$HealthResToJson(HealthRes instance) => <String, dynamic>{
   'status': instance.status,

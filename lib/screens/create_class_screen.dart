@@ -9,6 +9,7 @@ import '../data/api/api_provider_course.dart';
 import '../data/api/api_provider_school.dart';
 import '../data/api/api_provider_users.dart';
 import '../data/model/request/req_course.dart';
+import '../data/model/request/req_school.dart';
 import '../data/model/response/res_school.dart';
 import '../data/model/response/res_user.dart';
 
@@ -143,6 +144,20 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showCreateSchoolDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateSchoolDialog(
+        onSchoolCreated: (newSchool) {
+          setState(() {
+            schools.add(newSchool);
+            selectedSchoolId = newSchool.id;
+          });
+        },
       ),
     );
   }
@@ -495,12 +510,41 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               hint: Text('Select School', style: TextStyle(color: AppColors.textSecondary)),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
-              items: schools.map((school) => DropdownMenuItem(
-                value: school.id,
-                child: Text(school.name),
-              )).toList(),
+              items: [
+                // Create New School Option
+                DropdownMenuItem<String>(
+                  value: '__create_new__',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_circle_outline, size: 20, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Create New School',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Divider
+                DropdownMenuItem<String>(
+                  enabled: false,
+                  child: Divider(height: 1),
+                ),
+                // Existing schools
+                ...schools.map((school) => DropdownMenuItem(
+                  value: school.id,
+                  child: Text(school.name),
+                )),
+              ],
               onChanged: (value) {
-                setState(() => selectedSchoolId = value);
+                if (value == '__create_new__') {
+                  _showCreateSchoolDialog();
+                } else {
+                  setState(() => selectedSchoolId = value);
+                }
               },
             ),
           ),
@@ -555,6 +599,272 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     _startTimeController.dispose();
     _endTimeController.dispose();
     _overviewController.dispose();
+    super.dispose();
+  }
+}
+
+// Create School Dialog
+class CreateSchoolDialog extends StatefulWidget {
+  final Function(SchoolRes) onSchoolCreated;
+
+  const CreateSchoolDialog({Key? key, required this.onSchoolCreated}) : super(key: key);
+
+  @override
+  State<CreateSchoolDialog> createState() => _CreateSchoolDialogState();
+}
+
+class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
+  final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _latController = TextEditingController();
+  final TextEditingController _longController = TextEditingController();
+
+  bool isSaving = false;
+  String? errorMessage;
+
+  Future<void> _createSchool() async {
+    // Validate
+    if (_nameController.text.trim().isEmpty) {
+      setState(() => errorMessage = 'Please enter school name');
+      return;
+    }
+
+    final lat = double.tryParse(_latController.text.trim());
+    final long = double.tryParse(_longController.text.trim());
+
+    if (lat == null || long == null) {
+      setState(() => errorMessage = 'Please enter valid GPS coordinates');
+      return;
+    }
+
+    setState(() {
+      isSaving = true;
+      errorMessage = null;
+    });
+
+    try {
+      final request = CreateSchoolReq(
+        _nameController.text.trim(),
+        GpsLocation(lat, long),
+      );
+
+      final response = await _schoolApi.createSchool(request);
+
+      if (mounted) {
+        widget.onSchoolCreated(response);
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('School "${response.name}" created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Failed to create school: ${e.toString()}';
+          isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 450,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Create New School',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Error Message
+            if (errorMessage != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        errorMessage!,
+                        style: TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // School Name
+            Text(
+              'School Name *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                hintText: 'Enter school name',
+                filled: true,
+                fillColor: AppColors.inputBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.inputBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.inputBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // GPS Coordinates
+            Text(
+              'GPS Location *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _latController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Latitude',
+                      filled: true,
+                      fillColor: AppColors.inputBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _longController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Longitude',
+                      filled: true,
+                      fillColor: AppColors.inputBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'e.g., Hong Kong: 22.3193, 114.1694',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 32),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: isSaving ? null : _createSchool,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: isSaving
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text('Create School', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _latController.dispose();
+    _longController.dispose();
     super.dispose();
   }
 }

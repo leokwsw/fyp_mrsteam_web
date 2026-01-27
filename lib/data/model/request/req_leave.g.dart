@@ -7,15 +7,12 @@ part of 'req_leave.dart';
 // **************************************************************************
 
 CreateLeaveReq _$CreateLeaveReqFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('CreateLeaveReq', json, ($checkedConvert) {
-      final val = CreateLeaveReq(
-        $checkedConvert('reason', (v) => v as String),
-        $checkedConvert('startDate', (v) => v as String),
-        $checkedConvert('endDate', (v) => v as String),
-        courseId: $checkedConvert('courseId', (v) => v as String?),
-      );
-      return val;
-    });
+    CreateLeaveReq(
+      json['reason'] as String,
+      json['startDate'] as String,
+      json['endDate'] as String,
+      courseId: json['courseId'] as String?,
+    );
 
 Map<String, dynamic> _$CreateLeaveReqToJson(CreateLeaveReq instance) =>
     <String, dynamic>{
@@ -26,15 +23,12 @@ Map<String, dynamic> _$CreateLeaveReqToJson(CreateLeaveReq instance) =>
     };
 
 UpdateLeaveReq _$UpdateLeaveReqFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('UpdateLeaveReq', json, ($checkedConvert) {
-      final val = UpdateLeaveReq(
-        courseId: $checkedConvert('courseId', (v) => v as String?),
-        reason: $checkedConvert('reason', (v) => v as String?),
-        startDate: $checkedConvert('startDate', (v) => v as String?),
-        endDate: $checkedConvert('endDate', (v) => v as String?),
-      );
-      return val;
-    });
+    UpdateLeaveReq(
+      courseId: json['courseId'] as String?,
+      reason: json['reason'] as String?,
+      startDate: json['startDate'] as String?,
+      endDate: json['endDate'] as String?,
+    );
 
 Map<String, dynamic> _$UpdateLeaveReqToJson(UpdateLeaveReq instance) =>
     <String, dynamic>{
@@ -45,16 +39,10 @@ Map<String, dynamic> _$UpdateLeaveReqToJson(UpdateLeaveReq instance) =>
     };
 
 ApproveLeaveReq _$ApproveLeaveReqFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('ApproveLeaveReq', json, ($checkedConvert) {
-      final val = ApproveLeaveReq(
-        $checkedConvert('action', (v) => v as String),
-        rejectionReason: $checkedConvert(
-          'rejectionReason',
-          (v) => v as String?,
-        ),
-      );
-      return val;
-    });
+    ApproveLeaveReq(
+      json['action'] as String,
+      rejectionReason: json['rejectionReason'] as String?,
+    );
 
 Map<String, dynamic> _$ApproveLeaveReqToJson(ApproveLeaveReq instance) =>
     <String, dynamic>{
