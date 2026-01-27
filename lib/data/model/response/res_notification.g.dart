@@ -7,21 +7,18 @@ part of 'res_notification.dart';
 // **************************************************************************
 
 NotificationRes _$NotificationResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('NotificationRes', json, ($checkedConvert) {
-      final val = NotificationRes(
-        $checkedConvert('userId', (v) => v as String),
-        $checkedConvert('type', (v) => v as String),
-        $checkedConvert('title', (v) => v as String),
-        $checkedConvert('content', (v) => v as String),
-        $checkedConvert('isRead', (v) => v as bool),
-        $checkedConvert('sentAt', (v) => v as String),
-        id: $checkedConvert('_id', (v) => v as String?),
-        courseId: $checkedConvert('courseId', (v) => v as String?),
-        createdAt: $checkedConvert('createdAt', (v) => v as String?),
-        updatedAt: $checkedConvert('updatedAt', (v) => v as String?),
-      );
-      return val;
-    }, fieldKeyMap: const {'id': '_id'});
+    NotificationRes(
+      json['userId'] as String,
+      json['type'] as String,
+      json['title'] as String,
+      json['content'] as String,
+      json['isRead'] as bool,
+      json['sentAt'] as String,
+      id: json['_id'] as String?,
+      courseId: json['courseId'] as String?,
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+    );
 
 Map<String, dynamic> _$NotificationResToJson(NotificationRes instance) =>
     <String, dynamic>{
@@ -38,21 +35,15 @@ Map<String, dynamic> _$NotificationResToJson(NotificationRes instance) =>
     };
 
 NotificationListRes _$NotificationListResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('NotificationListRes', json, ($checkedConvert) {
-      final val = NotificationListRes(
-        $checkedConvert(
-          'items',
-          (v) => (v as List<dynamic>)
-              .map((e) => NotificationRes.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-        $checkedConvert('total', (v) => (v as num).toInt()),
-        $checkedConvert('page', (v) => (v as num).toInt()),
-        $checkedConvert('limit', (v) => (v as num).toInt()),
-        $checkedConvert('pages', (v) => (v as num).toInt()),
-      );
-      return val;
-    });
+    NotificationListRes(
+      (json['items'] as List<dynamic>)
+          .map((e) => NotificationRes.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      (json['total'] as num).toInt(),
+      (json['page'] as num).toInt(),
+      (json['limit'] as num).toInt(),
+      (json['pages'] as num).toInt(),
+    );
 
 Map<String, dynamic> _$NotificationListResToJson(
   NotificationListRes instance,
@@ -65,12 +56,7 @@ Map<String, dynamic> _$NotificationListResToJson(
 };
 
 UnreadCountRes _$UnreadCountResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('UnreadCountRes', json, ($checkedConvert) {
-      final val = UnreadCountRes(
-        $checkedConvert('count', (v) => (v as num).toInt()),
-      );
-      return val;
-    });
+    UnreadCountRes((json['count'] as num).toInt());
 
 Map<String, dynamic> _$UnreadCountResToJson(UnreadCountRes instance) =>
     <String, dynamic>{'count': instance.count};

@@ -7,30 +7,19 @@ part of 'res_attendance.dart';
 // **************************************************************************
 
 AttendanceRes _$AttendanceResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'AttendanceRes',
-      json,
-      ($checkedConvert) {
-        final val = AttendanceRes(
-          $checkedConvert('courseId', (v) => v as String),
-          $checkedConvert(
-            'timestamp',
-            (v) => CourseTimestampRes.fromJson(v as Map<String, dynamic>),
-          ),
-          $checkedConvert('timestamp_index', (v) => v as num),
-          $checkedConvert('checked', (v) => v as bool),
-          $checkedConvert('tutorId', (v) => v as String),
-          $checkedConvert('schoolId', (v) => v as String),
-          id: $checkedConvert('_id', (v) => v as String?),
-          photoUrl: $checkedConvert('photoUrl', (v) => v as String?),
-          checkInTime: $checkedConvert('checkInTime', (v) => v as String?),
-          isDeleted: $checkedConvert('isDeleted', (v) => v as bool?),
-          createdAt: $checkedConvert('createdAt', (v) => v as String?),
-          updatedAt: $checkedConvert('updatedAt', (v) => v as String?),
-        );
-        return val;
-      },
-      fieldKeyMap: const {'timestampIndex': 'timestamp_index', 'id': '_id'},
+    AttendanceRes(
+      json['courseId'] as String,
+      CourseTimestampRes.fromJson(json['timestamp'] as Map<String, dynamic>),
+      json['timestamp_index'] as num,
+      json['checked'] as bool,
+      json['tutorId'] as String,
+      json['schoolId'] as String,
+      id: json['_id'] as String?,
+      photoUrl: json['photoUrl'] as String?,
+      checkInTime: json['checkInTime'] as String?,
+      isDeleted: json['isDeleted'] as bool?,
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
     );
 
 Map<String, dynamic> _$AttendanceResToJson(AttendanceRes instance) =>
@@ -50,35 +39,21 @@ Map<String, dynamic> _$AttendanceResToJson(AttendanceRes instance) =>
     };
 
 AttendanceListRes _$AttendanceListResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('AttendanceListRes', json, ($checkedConvert) {
-      final val = AttendanceListRes(
-        $checkedConvert(
-          'items',
-          (v) => (v as List<dynamic>)
-              .map((e) => AttendanceRes.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-        $checkedConvert('total', (v) => (v as num).toInt()),
-        $checkedConvert('page', (v) => (v as num).toInt()),
-        $checkedConvert('limit', (v) => (v as num).toInt()),
-        $checkedConvert('pages', (v) => (v as num).toInt()),
-        courses: $checkedConvert(
-          'courses',
-          (v) => (v as Map<String, dynamic>?)?.map(
-            (k, e) =>
-                MapEntry(k, CourseRes.fromJson(e as Map<String, dynamic>)),
-          ),
-        ),
-        schools: $checkedConvert(
-          'schools',
-          (v) => (v as Map<String, dynamic>?)?.map(
-            (k, e) =>
-                MapEntry(k, SchoolRes.fromJson(e as Map<String, dynamic>)),
-          ),
-        ),
-      );
-      return val;
-    });
+    AttendanceListRes(
+      (json['items'] as List<dynamic>)
+          .map((e) => AttendanceRes.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      (json['total'] as num).toInt(),
+      (json['page'] as num).toInt(),
+      (json['limit'] as num).toInt(),
+      (json['pages'] as num).toInt(),
+      courses: (json['courses'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, CourseRes.fromJson(e as Map<String, dynamic>)),
+      ),
+      schools: (json['schools'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, SchoolRes.fromJson(e as Map<String, dynamic>)),
+      ),
+    );
 
 Map<String, dynamic> _$AttendanceListResToJson(AttendanceListRes instance) =>
     <String, dynamic>{

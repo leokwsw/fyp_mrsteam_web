@@ -8,12 +8,7 @@ part of 'req_notification.dart';
 
 RegisterDeviceTokenReq _$RegisterDeviceTokenReqFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('RegisterDeviceTokenReq', json, ($checkedConvert) {
-  final val = RegisterDeviceTokenReq(
-    $checkedConvert('fcmToken', (v) => v as String),
-  );
-  return val;
-});
+) => RegisterDeviceTokenReq(json['fcmToken'] as String);
 
 Map<String, dynamic> _$RegisterDeviceTokenReqToJson(
   RegisterDeviceTokenReq instance,
@@ -21,16 +16,13 @@ Map<String, dynamic> _$RegisterDeviceTokenReqToJson(
 
 CreateNotificationTemplateReq _$CreateNotificationTemplateReqFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('CreateNotificationTemplateReq', json, ($checkedConvert) {
-  final val = CreateNotificationTemplateReq(
-    $checkedConvert('name', (v) => v as String),
-    $checkedConvert('type', (v) => v as String),
-    $checkedConvert('title', (v) => v as String),
-    $checkedConvert('content', (v) => v as String),
-    isActive: $checkedConvert('isActive', (v) => v as bool?),
-  );
-  return val;
-});
+) => CreateNotificationTemplateReq(
+  json['name'] as String,
+  json['type'] as String,
+  json['title'] as String,
+  json['content'] as String,
+  isActive: json['isActive'] as bool?,
+);
 
 Map<String, dynamic> _$CreateNotificationTemplateReqToJson(
   CreateNotificationTemplateReq instance,
@@ -44,16 +36,13 @@ Map<String, dynamic> _$CreateNotificationTemplateReqToJson(
 
 UpdateNotificationTemplateReq _$UpdateNotificationTemplateReqFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('UpdateNotificationTemplateReq', json, ($checkedConvert) {
-  final val = UpdateNotificationTemplateReq(
-    name: $checkedConvert('name', (v) => v as String?),
-    type: $checkedConvert('type', (v) => v as String?),
-    title: $checkedConvert('title', (v) => v as String?),
-    content: $checkedConvert('content', (v) => v as String?),
-    isActive: $checkedConvert('isActive', (v) => v as bool?),
-  );
-  return val;
-});
+) => UpdateNotificationTemplateReq(
+  name: json['name'] as String?,
+  type: json['type'] as String?,
+  title: json['title'] as String?,
+  content: json['content'] as String?,
+  isActive: json['isActive'] as bool?,
+);
 
 Map<String, dynamic> _$UpdateNotificationTemplateReqToJson(
   UpdateNotificationTemplateReq instance,

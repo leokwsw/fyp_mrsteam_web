@@ -6,20 +6,16 @@ part of 'res_user.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-UserResponse _$UserResponseFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('UserResponse', json, ($checkedConvert) {
-      final val = UserResponse(
-        $checkedConvert('email', (v) => v as String),
-        $checkedConvert('name', (v) => v as String),
-        id: $checkedConvert('_id', (v) => v as String?),
-        username: $checkedConvert('username', (v) => v as String?),
-        role: $checkedConvert('role', (v) => v as String?),
-        isActive: $checkedConvert('isActive', (v) => v as bool?),
-        createdAt: $checkedConvert('createdAt', (v) => v as String?),
-        updatedAt: $checkedConvert('updatedAt', (v) => v as String?),
-      );
-      return val;
-    }, fieldKeyMap: const {'id': '_id'});
+UserResponse _$UserResponseFromJson(Map<String, dynamic> json) => UserResponse(
+  json['email'] as String,
+  json['name'] as String,
+  id: json['_id'] as String?,
+  username: json['username'] as String?,
+  role: json['role'] as String?,
+  isActive: json['isActive'] as bool?,
+  createdAt: json['createdAt'] as String?,
+  updatedAt: json['updatedAt'] as String?,
+);
 
 Map<String, dynamic> _$UserResponseToJson(UserResponse instance) =>
     <String, dynamic>{

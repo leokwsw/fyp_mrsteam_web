@@ -24,7 +24,7 @@ class SchoolRes {
   @JsonKey(name: '_id')
   final String? id;
   final String name;
-  final SchoolGpsRes gps;
+  final SchoolGpsRes? gps;
   final bool? isDeleted;
   final String? createdAt;
   final String? updatedAt;

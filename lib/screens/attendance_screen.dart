@@ -8,6 +8,7 @@ import '../data/api/api_provider_attendance.dart';
 import '../data/api/api_provider_users.dart';
 import '../data/api/api_provider_course.dart';
 import '../data/api/api_provider_school.dart';
+import '../data/model/request/req_school.dart';
 import '../data/model/response/res_attendance.dart';
 import '../data/model/response/res_course.dart';
 import '../data/model/response/res_school.dart';
@@ -76,6 +77,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       schoolOptions = schoolsRes.items;
 
       // Build lookup maps
+      tutorsMap.clear();
+      coursesMap.clear();
+      schoolsMap.clear();
+      
       for (var tutor in tutorOptions) {
         if (tutor.id != null) {
           tutorsMap[tutor.id!] = tutor;
@@ -90,6 +95,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         if (school.id != null) {
           schoolsMap[school.id!] = school;
         }
+      }
+
+      // Reset selected values if they don't exist in the loaded options
+      if (selectedTutorId != null && !tutorsMap.containsKey(selectedTutorId)) {
+        selectedTutorId = null;
+      }
+      if (selectedCourseId != null && !coursesMap.containsKey(selectedCourseId)) {
+        selectedCourseId = null;
+      }
+      if (selectedSchoolId != null && !schoolsMap.containsKey(selectedSchoolId)) {
+        selectedSchoolId = null;
       }
 
       // Load attendances
@@ -164,12 +180,30 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
+  void _showCreateSchoolDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateSchoolDialog(
+        onSchoolCreated: (newSchool) {
+          setState(() {
+            schoolOptions.add(newSchool);
+            if (newSchool.id != null) {
+              schoolsMap[newSchool.id!] = newSchool;
+            }
+            selectedSchoolId = newSchool.id;
+          });
+          _loadAttendances();
+        },
+      ),
+    );
+  }
+
   String _getStatusFromAttendance(AttendanceRes attendance) {
     if (!attendance.checked) {
       return 'Absent';
     }
     
-    if (attendance.checkInTime != null && attendance.timestamp != null) {
+    if (attendance.checkInTime != null) {
       try {
         final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
         final checkIn = DateTime.parse(attendance.checkInTime!);
@@ -199,9 +233,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  String _formatTimestamp(CourseTimestampRes? timestamp) {
-    if (timestamp == null) return '-';
-    
+  String _formatTimestamp(CourseTimestampRes timestamp) {
     try {
       final start = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
       final end = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
@@ -291,7 +323,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   // Refresh Button
                   IconButton(
                     icon: Icon(Icons.refresh),
-                    onPressed: _loadAttendances,
+                    onPressed: _loadData,
                     tooltip: 'Refresh',
                   ),
                 ],
@@ -369,6 +401,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildTutorDropdown() {
+    // Validate selected value exists in options
+    final validTutorIds = tutorOptions.map((t) => t.id).toSet();
+    final currentValue = (selectedTutorId != null && validTutorIds.contains(selectedTutorId)) 
+        ? selectedTutorId 
+        : null;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -378,19 +416,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: selectedTutorId,
+          value: currentValue,
           hint: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Tutor', style: TextStyle(fontSize: 14)),
+              Text('All Tutors', style: TextStyle(fontSize: 14)),
               const SizedBox(width: 8),
               Icon(Icons.arrow_drop_down, size: 20),
             ],
           ),
           icon: Container(),
           items: [
-            DropdownMenuItem(value: null, child: Text('All Tutors')),
-            ...tutorOptions.map((tutor) => DropdownMenuItem(
+            DropdownMenuItem<String>(value: null, child: Text('All Tutors')),
+            ...tutorOptions.map((tutor) => DropdownMenuItem<String>(
               value: tutor.id,
               child: Text(tutor.name, style: TextStyle(fontSize: 14)),
             )),
@@ -405,6 +443,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildCourseDropdown() {
+    // Validate selected value exists in options
+    final validCourseIds = courseOptions.map((c) => c.id).toSet();
+    final currentValue = (selectedCourseId != null && validCourseIds.contains(selectedCourseId)) 
+        ? selectedCourseId 
+        : null;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -414,19 +458,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: selectedCourseId,
+          value: currentValue,
           hint: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Class', style: TextStyle(fontSize: 14)),
+              Text('All Classes', style: TextStyle(fontSize: 14)),
               const SizedBox(width: 8),
               Icon(Icons.arrow_drop_down, size: 20),
             ],
           ),
           icon: Container(),
           items: [
-            DropdownMenuItem(value: null, child: Text('All Classes')),
-            ...courseOptions.map((course) => DropdownMenuItem(
+            DropdownMenuItem<String>(value: null, child: Text('All Classes')),
+            ...courseOptions.map((course) => DropdownMenuItem<String>(
               value: course.id,
               child: Text(course.name, style: TextStyle(fontSize: 14)),
             )),
@@ -441,6 +485,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildSchoolDropdown() {
+    // Validate selected value exists in options
+    final validSchoolIds = schoolOptions.map((s) => s.id).toSet();
+    final currentValue = (selectedSchoolId != null && validSchoolIds.contains(selectedSchoolId)) 
+        ? selectedSchoolId 
+        : null;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -450,26 +500,47 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: selectedSchoolId,
+          value: currentValue,
           hint: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('School', style: TextStyle(fontSize: 14)),
+              Text('All Schools', style: TextStyle(fontSize: 14)),
               const SizedBox(width: 8),
               Icon(Icons.arrow_drop_down, size: 20),
             ],
           ),
           icon: Container(),
           items: [
-            DropdownMenuItem(value: null, child: Text('All Schools')),
-            ...schoolOptions.map((school) => DropdownMenuItem(
+            DropdownMenuItem<String>(value: null, child: Text('All Schools')),
+            DropdownMenuItem<String>(
+              value: '__create_new__',
+              child: Row(
+                children: [
+                  Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create New School',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...schoolOptions.map((school) => DropdownMenuItem<String>(
               value: school.id,
               child: Text(school.name, style: TextStyle(fontSize: 14)),
             )),
           ],
           onChanged: (value) {
-            setState(() => selectedSchoolId = value);
-            _loadAttendances();
+            if (value == '__create_new__') {
+              _showCreateSchoolDialog();
+            } else {
+              setState(() => selectedSchoolId = value);
+              _loadAttendances();
+            }
           },
         ),
       ),
@@ -477,6 +548,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildStatusDropdown() {
+    // Validate selected status is valid
+    final validStatuses = {'Present', 'Absent', 'Late'};
+    final currentValue = (selectedStatus != null && validStatuses.contains(selectedStatus)) 
+        ? selectedStatus 
+        : null;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -486,21 +563,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: selectedStatus,
+          value: currentValue,
           hint: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Status', style: TextStyle(fontSize: 14)),
+              Text('All Status', style: TextStyle(fontSize: 14)),
               const SizedBox(width: 8),
               Icon(Icons.arrow_drop_down, size: 20),
             ],
           ),
           icon: Container(),
           items: [
-            DropdownMenuItem(value: null, child: Text('All Status')),
-            DropdownMenuItem(value: 'Present', child: Text('Present')),
-            DropdownMenuItem(value: 'Absent', child: Text('Absent')),
-            DropdownMenuItem(value: 'Late', child: Text('Late')),
+            DropdownMenuItem<String>(value: null, child: Text('All Status')),
+            DropdownMenuItem<String>(value: 'Present', child: Text('Present')),
+            DropdownMenuItem<String>(value: 'Absent', child: Text('Absent')),
+            DropdownMenuItem<String>(value: 'Late', child: Text('Late')),
           ],
           onChanged: (value) {
             setState(() => selectedStatus = value);
@@ -581,7 +658,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Expanded(flex: 2, child: Text('Scheduled Time', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Check-in Time', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Status', style: _headerStyle())),
-                Expanded(flex: 3, child: Text('Notes', style: _headerStyle())),
               ],
             ),
           ),
@@ -671,6 +747,275 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    super.dispose();
+  }
+}
+
+// Create School Dialog
+class CreateSchoolDialog extends StatefulWidget {
+  final Function(SchoolRes) onSchoolCreated;
+
+  const CreateSchoolDialog({Key? key, required this.onSchoolCreated}) : super(key: key);
+
+  @override
+  State<CreateSchoolDialog> createState() => _CreateSchoolDialogState();
+}
+
+class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
+  final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _latController = TextEditingController();
+  final TextEditingController _longController = TextEditingController();
+
+  bool isSaving = false;
+  String? errorMessage;
+
+  Future<void> _createSchool() async {
+    // Validate
+    if (_nameController.text.trim().isEmpty) {
+      setState(() => errorMessage = 'Please enter school name');
+      return;
+    }
+
+    final lat = double.tryParse(_latController.text.trim());
+    final long = double.tryParse(_longController.text.trim());
+
+    // Only validate GPS if user entered something
+    if (_latController.text.trim().isNotEmpty || _longController.text.trim().isNotEmpty) {
+      if (lat == null || long == null) {
+        setState(() => errorMessage = 'Please enter valid GPS coordinates');
+        return;
+      }
+    }
+
+    setState(() {
+      isSaving = true;
+      errorMessage = null;
+    });
+
+    try {
+      final request = CreateSchoolReq(
+        _nameController.text.trim(),
+        GpsLocation(lat ?? 0.0, long ?? 0.0),
+      );
+
+      final response = await _schoolApi.createSchool(request);
+
+      if (mounted) {
+        widget.onSchoolCreated(response);
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('School "${response.name}" created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Failed to create school: ${e.toString()}';
+          isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 450,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Create New School',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Error Message
+            if (errorMessage != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        errorMessage!,
+                        style: TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // School Name
+            Text(
+              'School Name *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                hintText: 'Enter school name',
+                filled: true,
+                fillColor: AppColors.inputBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.inputBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.inputBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // GPS Coordinates
+            Text(
+              'GPS Location (Optional)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _latController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Latitude',
+                      filled: true,
+                      fillColor: AppColors.inputBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _longController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Longitude',
+                      filled: true,
+                      fillColor: AppColors.inputBackground,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'e.g., Hong Kong: 22.3193, 114.1694',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 32),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: isSaving ? null : _createSchool,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: isSaving
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text('Create School', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _latController.dispose();
+    _longController.dispose();
     super.dispose();
   }
 }

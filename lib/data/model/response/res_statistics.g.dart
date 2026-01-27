@@ -8,15 +8,12 @@ part of 'res_statistics.dart';
 
 StatisticsAttendanceSummaryRes _$StatisticsAttendanceSummaryResFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('StatisticsAttendanceSummaryRes', json, ($checkedConvert) {
-  final val = StatisticsAttendanceSummaryRes(
-    $checkedConvert('total', (v) => v as num),
-    $checkedConvert('checked', (v) => v as num),
-    $checkedConvert('unchecked', (v) => v as num),
-    $checkedConvert('attendanceRate', (v) => v as num),
-  );
-  return val;
-});
+) => StatisticsAttendanceSummaryRes(
+  json['total'] as num,
+  json['checked'] as num,
+  json['unchecked'] as num,
+  json['attendanceRate'] as num,
+);
 
 Map<String, dynamic> _$StatisticsAttendanceSummaryResToJson(
   StatisticsAttendanceSummaryRes instance,
@@ -29,25 +26,17 @@ Map<String, dynamic> _$StatisticsAttendanceSummaryResToJson(
 
 StatisticsAttendanceRes _$StatisticsAttendanceResFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('StatisticsAttendanceRes', json, ($checkedConvert) {
-  final val = StatisticsAttendanceRes(
-    $checkedConvert(
-      'summary',
-      (v) => StatisticsAttendanceSummaryRes.fromJson(v as Map<String, dynamic>),
-    ),
-    $checkedConvert(
-      'byTutor',
-      (v) =>
-          (v as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
-    ),
-    $checkedConvert(
-      'bySchool',
-      (v) =>
-          (v as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
-    ),
-  );
-  return val;
-});
+) => StatisticsAttendanceRes(
+  StatisticsAttendanceSummaryRes.fromJson(
+    json['summary'] as Map<String, dynamic>,
+  ),
+  (json['byTutor'] as List<dynamic>)
+      .map((e) => e as Map<String, dynamic>)
+      .toList(),
+  (json['bySchool'] as List<dynamic>)
+      .map((e) => e as Map<String, dynamic>)
+      .toList(),
+);
 
 Map<String, dynamic> _$StatisticsAttendanceResToJson(
   StatisticsAttendanceRes instance,
@@ -59,16 +48,13 @@ Map<String, dynamic> _$StatisticsAttendanceResToJson(
 
 StatisticsLeaveSummaryRes _$StatisticsLeaveSummaryResFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('StatisticsLeaveSummaryRes', json, ($checkedConvert) {
-  final val = StatisticsLeaveSummaryRes(
-    $checkedConvert('total', (v) => v as num),
-    $checkedConvert('pending', (v) => v as num),
-    $checkedConvert('approved', (v) => v as num),
-    $checkedConvert('rejected', (v) => v as num),
-    $checkedConvert('approvalRate', (v) => v as num),
-  );
-  return val;
-});
+) => StatisticsLeaveSummaryRes(
+  json['total'] as num,
+  json['pending'] as num,
+  json['approved'] as num,
+  json['rejected'] as num,
+  json['approvalRate'] as num,
+);
 
 Map<String, dynamic> _$StatisticsLeaveSummaryResToJson(
   StatisticsLeaveSummaryRes instance,
@@ -80,27 +66,18 @@ Map<String, dynamic> _$StatisticsLeaveSummaryResToJson(
   'approvalRate': instance.approvalRate,
 };
 
-StatisticsLeaveRes _$StatisticsLeaveResFromJson(
-  Map<String, dynamic> json,
-) => $checkedCreate('StatisticsLeaveRes', json, ($checkedConvert) {
-  final val = StatisticsLeaveRes(
-    $checkedConvert(
-      'summary',
-      (v) => StatisticsLeaveSummaryRes.fromJson(v as Map<String, dynamic>),
-    ),
-    $checkedConvert(
-      'byStatus',
-      (v) =>
-          (v as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
-    ),
-    $checkedConvert(
-      'byTutor',
-      (v) =>
-          (v as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
-    ),
-  );
-  return val;
-});
+StatisticsLeaveRes _$StatisticsLeaveResFromJson(Map<String, dynamic> json) =>
+    StatisticsLeaveRes(
+      StatisticsLeaveSummaryRes.fromJson(
+        json['summary'] as Map<String, dynamic>,
+      ),
+      (json['byStatus'] as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList(),
+      (json['byTutor'] as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList(),
+    );
 
 Map<String, dynamic> _$StatisticsLeaveResToJson(StatisticsLeaveRes instance) =>
     <String, dynamic>{
@@ -111,38 +88,24 @@ Map<String, dynamic> _$StatisticsLeaveResToJson(StatisticsLeaveRes instance) =>
 
 StatisticsCourseSummaryRes _$StatisticsCourseSummaryResFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('StatisticsCourseSummaryRes', json, ($checkedConvert) {
-  final val = StatisticsCourseSummaryRes(
-    $checkedConvert('total', (v) => v as num),
-  );
-  return val;
-});
+) => StatisticsCourseSummaryRes(json['total'] as num);
 
 Map<String, dynamic> _$StatisticsCourseSummaryResToJson(
   StatisticsCourseSummaryRes instance,
 ) => <String, dynamic>{'total': instance.total};
 
-StatisticsCourseRes _$StatisticsCourseResFromJson(
-  Map<String, dynamic> json,
-) => $checkedCreate('StatisticsCourseRes', json, ($checkedConvert) {
-  final val = StatisticsCourseRes(
-    $checkedConvert(
-      'summary',
-      (v) => StatisticsCourseSummaryRes.fromJson(v as Map<String, dynamic>),
-    ),
-    $checkedConvert(
-      'byTutor',
-      (v) =>
-          (v as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
-    ),
-    $checkedConvert(
-      'bySchool',
-      (v) =>
-          (v as List<dynamic>).map((e) => e as Map<String, dynamic>).toList(),
-    ),
-  );
-  return val;
-});
+StatisticsCourseRes _$StatisticsCourseResFromJson(Map<String, dynamic> json) =>
+    StatisticsCourseRes(
+      StatisticsCourseSummaryRes.fromJson(
+        json['summary'] as Map<String, dynamic>,
+      ),
+      (json['byTutor'] as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList(),
+      (json['bySchool'] as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList(),
+    );
 
 Map<String, dynamic> _$StatisticsCourseResToJson(
   StatisticsCourseRes instance,
@@ -153,13 +116,7 @@ Map<String, dynamic> _$StatisticsCourseResToJson(
 };
 
 StatisticsUsersRes _$StatisticsUsersResFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('StatisticsUsersRes', json, ($checkedConvert) {
-      final val = StatisticsUsersRes(
-        $checkedConvert('totalTutors', (v) => v as num),
-        $checkedConvert('totalStaff', (v) => v as num),
-      );
-      return val;
-    });
+    StatisticsUsersRes(json['totalTutors'] as num, json['totalStaff'] as num);
 
 Map<String, dynamic> _$StatisticsUsersResToJson(StatisticsUsersRes instance) =>
     <String, dynamic>{
@@ -169,27 +126,12 @@ Map<String, dynamic> _$StatisticsUsersResToJson(StatisticsUsersRes instance) =>
 
 StatisticsDashboardRes _$StatisticsDashboardResFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('StatisticsDashboardRes', json, ($checkedConvert) {
-  final val = StatisticsDashboardRes(
-    $checkedConvert(
-      'attendance',
-      (v) => StatisticsAttendanceRes.fromJson(v as Map<String, dynamic>),
-    ),
-    $checkedConvert(
-      'leave',
-      (v) => StatisticsLeaveRes.fromJson(v as Map<String, dynamic>),
-    ),
-    $checkedConvert(
-      'course',
-      (v) => StatisticsCourseRes.fromJson(v as Map<String, dynamic>),
-    ),
-    $checkedConvert(
-      'users',
-      (v) => StatisticsUsersRes.fromJson(v as Map<String, dynamic>),
-    ),
-  );
-  return val;
-});
+) => StatisticsDashboardRes(
+  StatisticsAttendanceRes.fromJson(json['attendance'] as Map<String, dynamic>),
+  StatisticsLeaveRes.fromJson(json['leave'] as Map<String, dynamic>),
+  StatisticsCourseRes.fromJson(json['course'] as Map<String, dynamic>),
+  StatisticsUsersRes.fromJson(json['users'] as Map<String, dynamic>),
+);
 
 Map<String, dynamic> _$StatisticsDashboardResToJson(
   StatisticsDashboardRes instance,
