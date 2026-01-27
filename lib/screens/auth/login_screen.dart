@@ -21,15 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final ApiProviderAuth _authApi = getIt<ApiProviderAuth>();
 
-  String selectedRole = 'staff'; // Default role
   bool isLoading = false;
   String? errorMessage;
-
-  final List<Map<String, String>> roles = [
-    {'value': 'admin', 'label': 'Admin'},
-    {'value': 'staff', 'label': 'Staff'},
-    {'value': 'tutor', 'label': 'Tutor'},
-  ];
 
   Future<void> _handleLogin() async {
     // Validate input
@@ -51,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final request = LoginReq(
         _userIdController.text.trim(),
         _passwordController.text,
-        role: selectedRole,
+        role: 'staff',
       );
 
       final response = await _authApi.login(request);
@@ -187,57 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           placeholder: 'Enter your Password',
                           isPassword: true,
                           controller: _passwordController,
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Role Selector
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Role',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.inputBackground,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.inputBorder),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: selectedRole,
-                                  isExpanded: true,
-                                  icon: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-                                  items: roles.map((role) {
-                                    return DropdownMenuItem<String>(
-                                      value: role['value'],
-                                      child: Text(
-                                        role['label']!,
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: isLoading
-                                      ? null
-                                      : (value) {
-                                          if (value != null) {
-                                            setState(() {
-                                              selectedRole = value;
-                                            });
-                                          }
-                                        },
-                                ),
-                              ),
-                            ),
-                          ],
                         ),
                         const SizedBox(height: 32),
 

@@ -407,36 +407,33 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? selectedTutorId 
         : null;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: currentValue,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('All Tutors', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: currentValue,
+            isExpanded: true,
+            hint: Text('All Tutors', style: TextStyle(fontSize: 14)),
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem<String>(value: null, child: Text('All Tutors')),
+              ...tutorOptions.map((tutor) => DropdownMenuItem<String>(
+                value: tutor.id,
+                child: Text(tutor.name, style: TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
+              )),
             ],
+            onChanged: (value) {
+              setState(() => selectedTutorId = value);
+              _loadAttendances();
+            },
           ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem<String>(value: null, child: Text('All Tutors')),
-            ...tutorOptions.map((tutor) => DropdownMenuItem<String>(
-              value: tutor.id,
-              child: Text(tutor.name, style: TextStyle(fontSize: 14)),
-            )),
-          ],
-          onChanged: (value) {
-            setState(() => selectedTutorId = value);
-            _loadAttendances();
-          },
         ),
       ),
     );
@@ -449,36 +446,33 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? selectedCourseId 
         : null;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: currentValue,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('All Classes', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: currentValue,
+            isExpanded: true,
+            hint: Text('All Classes', style: TextStyle(fontSize: 14)),
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem<String>(value: null, child: Text('All Classes')),
+              ...courseOptions.map((course) => DropdownMenuItem<String>(
+                value: course.id,
+                child: Text(course.name, style: TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
+              )),
             ],
+            onChanged: (value) {
+              setState(() => selectedCourseId = value);
+              _loadAttendances();
+            },
           ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem<String>(value: null, child: Text('All Classes')),
-            ...courseOptions.map((course) => DropdownMenuItem<String>(
-              value: course.id,
-              child: Text(course.name, style: TextStyle(fontSize: 14)),
-            )),
-          ],
-          onChanged: (value) {
-            setState(() => selectedCourseId = value);
-            _loadAttendances();
-          },
         ),
       ),
     );
@@ -491,57 +485,57 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? selectedSchoolId 
         : null;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: currentValue,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('All Schools', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
-            ],
-          ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem<String>(value: null, child: Text('All Schools')),
-            DropdownMenuItem<String>(
-              value: '__create_new__',
-              child: Row(
-                children: [
-                  Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Create New School',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: currentValue,
+            isExpanded: true,
+            hint: Text('All Schools', style: TextStyle(fontSize: 14)),
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem<String>(value: null, child: Text('All Schools')),
+              DropdownMenuItem<String>(
+                value: '__create_new__',
+                child: Row(
+                  children: [
+                    Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Create New School',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            ...schoolOptions.map((school) => DropdownMenuItem<String>(
-              value: school.id,
-              child: Text(school.name, style: TextStyle(fontSize: 14)),
-            )),
-          ],
-          onChanged: (value) {
-            if (value == '__create_new__') {
-              _showCreateSchoolDialog();
-            } else {
-              setState(() => selectedSchoolId = value);
-              _loadAttendances();
-            }
-          },
+              ...schoolOptions.map((school) => DropdownMenuItem<String>(
+                value: school.id,
+                child: Text(school.name, style: TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
+              )),
+            ],
+            onChanged: (value) {
+              if (value == '__create_new__') {
+                _showCreateSchoolDialog();
+              } else {
+                setState(() => selectedSchoolId = value);
+                _loadAttendances();
+              }
+            },
+          ),
         ),
       ),
     );
@@ -554,42 +548,51 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? selectedStatus 
         : null;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: currentValue,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('All Status', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: currentValue,
+            isExpanded: true,
+            hint: Text('All Status', style: TextStyle(fontSize: 14)),
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem<String>(value: null, child: Text('All Status')),
+              DropdownMenuItem<String>(value: 'Present', child: Text('Present')),
+              DropdownMenuItem<String>(value: 'Absent', child: Text('Absent')),
+              DropdownMenuItem<String>(value: 'Late', child: Text('Late')),
             ],
+            onChanged: (value) {
+              setState(() => selectedStatus = value);
+            },
           ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem<String>(value: null, child: Text('All Status')),
-            DropdownMenuItem<String>(value: 'Present', child: Text('Present')),
-            DropdownMenuItem<String>(value: 'Absent', child: Text('Absent')),
-            DropdownMenuItem<String>(value: 'Late', child: Text('Late')),
-          ],
-          onChanged: (value) {
-            setState(() => selectedStatus = value);
-          },
         ),
       ),
     );
   }
 
   Widget _buildAttendanceTable() {
-    // Filter attendances based on search and status
+    final now = DateTime.now();
+    
+    // Filter attendances based on search, status, and exclude future classes
     final filteredAttendances = attendances.where((attendance) {
+      // Exclude future classes - only show if scheduled time has passed
+      try {
+        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
+        if (scheduledStart.isAfter(now)) {
+          return false; // Skip future classes
+        }
+      } catch (e) {
+        // If we can't parse the timestamp, include it
+      }
+
       // Status filter (client-side since API doesn't support status filter)
       if (selectedStatus != null) {
         final status = _getStatusFromAttendance(attendance);
@@ -615,6 +618,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
       return true;
     }).toList();
+
+    // Sort by date (most recent first)
+    filteredAttendances.sort((a, b) {
+      final aStart = a.timestamp.start.toInt();
+      final bStart = b.timestamp.start.toInt();
+      return bStart.compareTo(aStart); // Descending order (newest first)
+    });
 
     if (filteredAttendances.isEmpty) {
       return Container(
@@ -974,34 +984,52 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             ),
             const SizedBox(height: 32),
 
-            // Action Buttons
+            // Action Buttons - Same size
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
-                  child: Text('Cancel'),
+                SizedBox(
+                  width: 120,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
+                      elevation: 0,
+                      side: BorderSide(color: AppColors.inputBorder),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
                 ),
                 const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: isSaving ? null : _createSchool,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                SizedBox(
+                  width: 120,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: isSaving ? null : _createSchool,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
+                    child: isSaving
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text('Create', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
-                  child: isSaving
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text('Create School', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),

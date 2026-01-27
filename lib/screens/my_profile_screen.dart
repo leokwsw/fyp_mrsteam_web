@@ -4,6 +4,7 @@ import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_button.dart';
 import '../core/config/get_it.dart';
+import '../core/util/app_preferences.dart';
 import '../data/api/api_provider_users.dart';
 import '../data/model/response/res_user.dart';
 
@@ -19,6 +20,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
   UserResponse? user;
   bool isLoading = true;
+  bool isLoggingOut = false;
   String? errorMessage;
 
   @override
@@ -46,6 +48,62 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       });
     }
   }
+
+Future<void> _logout() async {
+  // Show confirmation dialog
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: Text('Logout'),
+      content: Text('Are you sure you want to logout?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text('Logout'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true) return;
+
+  setState(() => isLoggingOut = true);
+
+  try {
+    // Clear all stored tokens and session data
+    await AppPreferences.setAccessToken('');
+    await AppPreferences.setRefreshToken('');
+    await AppPreferences.setSessionId('');
+    await AppPreferences.setUserId('');
+
+    if (mounted) {
+      // Navigate to login screen
+      context.go('/');
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() => isLoggingOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
 
   String _capitalizeFirst(String? text) {
     if (text == null || text.isEmpty) return '-';
@@ -197,18 +255,68 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Change Password Button
-              Align(
-                alignment: Alignment.centerRight,
-                child: SizedBox(
-                  width: 180,
-                  child: CustomButton(
-                    text: 'Change Password',
-                    onPressed: () {
-                      context.go('/myprofile/changepassword');
-                    },
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Logout Button
+                  SizedBox(
+                    width: 120,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: isLoggingOut ? null : _logout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.red,
+                        elevation: 0,
+                        side: BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: isLoggingOut
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.logout, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Logout', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  // Change Password Button
+                  SizedBox(
+                    width: 180,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.go('/myprofile/changepassword');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'Change Password',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

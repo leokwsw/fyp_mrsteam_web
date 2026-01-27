@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_text_field.dart';
-import '../widgets/custom_button.dart';
 import '../core/config/get_it.dart';
 import '../data/api/api_provider_auth.dart';
 import '../data/model/request/req_auth.dart';
@@ -183,7 +182,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                        width: 140,
+                        width: 150,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: isLoading ? null : () => context.go('/myprofile'),
                           style: ElevatedButton.styleFrom(
@@ -191,40 +191,38 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             foregroundColor: AppColors.textPrimary,
                             elevation: 0,
                             side: BorderSide(color: AppColors.inputBorder),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: Text('Cancel'),
+                          child: Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
                       ),
                       const SizedBox(width: 16),
                       SizedBox(
-                        width: 160,
-                        child: isLoading
-                            ? ElevatedButton(
-                                onPressed: null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: SizedBox(
+                        width: 150,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : () => _handleUpdatePassword(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: isLoading
+                              ? SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
-                                ),
-                              )
-                            : CustomButton(
-                                text: 'Update Password',
-                                onPressed: () => _handleUpdatePassword(),
-                              ),
+                                )
+                              : Text('Update', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        ),
                       ),
                     ],
                   ),
