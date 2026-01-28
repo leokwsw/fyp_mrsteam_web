@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'req_user.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)  // Changed
 class CreateUserReq {
   final String? username;
   final String email;
@@ -27,7 +27,7 @@ class CreateUserReq {
       CreateUserReq.fromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)  // Changed
 class UpdateUserReq {
   final String? email;
   final String? password;
@@ -54,7 +54,7 @@ class UpdateUserReq {
       UpdateUserReq.fromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)  // Changed
 class ActiveUserReq {
   final String? isActive;
 
@@ -69,7 +69,7 @@ class ActiveUserReq {
       ActiveUserReq.fromJson(json);
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)  // Changed
 class ResetPasswordReq {
   final String newPassword;
 
