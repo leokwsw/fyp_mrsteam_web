@@ -17,11 +17,11 @@ CreateUserReq _$CreateUserReqFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CreateUserReqToJson(CreateUserReq instance) =>
     <String, dynamic>{
-      'username': instance.username,
+      'username': ?instance.username,
       'email': instance.email,
       'password': instance.password,
       'name': instance.name,
-      'role': instance.role,
+      'role': ?instance.role,
     };
 
 UpdateUserReq _$UpdateUserReqFromJson(Map<String, dynamic> json) =>
@@ -36,19 +36,19 @@ UpdateUserReq _$UpdateUserReqFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$UpdateUserReqToJson(UpdateUserReq instance) =>
     <String, dynamic>{
-      'email': instance.email,
-      'password': instance.password,
-      'name': instance.name,
-      'avatar': instance.avatar,
-      'fcmToken': instance.fcmToken,
-      'mustChangePassword': instance.mustChangePassword,
+      'email': ?instance.email,
+      'password': ?instance.password,
+      'name': ?instance.name,
+      'avatar': ?instance.avatar,
+      'fcmToken': ?instance.fcmToken,
+      'mustChangePassword': ?instance.mustChangePassword,
     };
 
 ActiveUserReq _$ActiveUserReqFromJson(Map<String, dynamic> json) =>
     ActiveUserReq(isActive: json['isActive'] as String?);
 
 Map<String, dynamic> _$ActiveUserReqToJson(ActiveUserReq instance) =>
-    <String, dynamic>{'isActive': instance.isActive};
+    <String, dynamic>{'isActive': ?instance.isActive};
 
 ResetPasswordReq _$ResetPasswordReqFromJson(Map<String, dynamic> json) =>
     ResetPasswordReq(json['newPassword'] as String);
