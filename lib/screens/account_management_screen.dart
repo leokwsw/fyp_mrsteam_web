@@ -272,7 +272,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 2, child: Text('User ID', style: _headerStyle())),
+                Expanded(flex: 2, child: Text('Username', style: _headerStyle())),
                 Expanded(flex: 3, child: Text('Name', style: _headerStyle())),
                 Expanded(flex: 4, child: Text('Email', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Account Role', style: _headerStyle())),
