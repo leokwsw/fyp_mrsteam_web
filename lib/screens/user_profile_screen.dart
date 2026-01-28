@@ -294,12 +294,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   width: 100,
                   child: CustomButton(
                     text: 'Edit',
-                    onPressed: () {
-                      // TODO: Navigate to edit screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Edit functionality coming soon')),
-                      );
-                    },
+                    onPressed: () => context.push('/account/user/${widget.userId}/edit'),
                   ),
                 ),
               ),

@@ -8,6 +8,7 @@ import 'package:fyp_mrsteam_web/screens/class_calendar_screen.dart';
 import 'package:fyp_mrsteam_web/screens/class_list_screen.dart';
 import 'package:fyp_mrsteam_web/screens/create_class_screen.dart';
 import 'package:fyp_mrsteam_web/screens/edit_class_screen.dart';
+import 'package:fyp_mrsteam_web/screens/edit_user_profile_screen.dart';
 import 'package:fyp_mrsteam_web/screens/dashboard_screen.dart';
 import 'package:fyp_mrsteam_web/screens/leave_request_screen.dart';
 import 'package:fyp_mrsteam_web/screens/account_management_screen.dart';
@@ -77,6 +78,12 @@ class AppRouter {
             final classId = state.pathParameters['id']!;
             return EditClassScreen(classId: classId);
           },
+        ),
+        GoRoute(
+          path: '/account/user/:userId/edit',
+          builder: (context, state) => EditUserProfileScreen(
+            userId: state.pathParameters['userId']!,
+          ),
         ),
         GoRoute(
           path: '/attendance',

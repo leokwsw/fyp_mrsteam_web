@@ -325,15 +325,18 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
       // Process each timestamp
       for (var timestamp in course.timestamps) {
-        final startDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
-        final endDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
+        // Parse as UTC and convert to Hong Kong time for consistent comparison
+        final startDateTimeUtc = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt(), isUtc: true);
+        final endDateTimeUtc = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt(), isUtc: true);
+        final startDateTime = startDateTimeUtc.add(Duration(hours: 8));
+        final endDateTime = endDateTimeUtc.add(Duration(hours: 8));
 
-        // Apply tab filter
+        // Apply tab filter - use endDateTime for "Upcoming" to include ongoing classes
         final now = currentDateTimeHK;
-        if (selectedTab == 'Upcoming' && startDateTime.isBefore(now)) continue;
-        if (selectedTab == 'Past' && startDateTime.isAfter(now)) continue;
+        if (selectedTab == 'Upcoming' && endDateTime.isBefore(now)) continue;
+        if (selectedTab == 'Past' && endDateTime.isAfter(now)) continue;
 
-        // Determine status
+        // Determine status based on end time
         String status = 'Scheduled';
         if (course.isDeleted == true) {
           status = 'Canceled';
@@ -364,9 +367,14 @@ class _ClassListScreenState extends State<ClassListScreen> {
       }
     }
 
-    // Sort by date
-    classList.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
-
+    // Sort by date based on selected tab
+      if (selectedTab == 'Upcoming') {
+    // Upcoming: soonest first (ascending)
+        classList.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+  } else {
+    // Past & All: newest first (descending)
+    classList.sort((a, b) => b.startDateTime.compareTo(a.startDateTime));
+  }
     return classList;
   }
 
@@ -913,7 +921,10 @@ class _ClassListScreenState extends State<ClassListScreen> {
             ),
             Expanded(
               flex: 1,
-              child: _buildStatusBadge(classItem.status),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildStatusBadge(classItem.status),
+              ),
             ),
           ],
         ),
@@ -925,6 +936,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
     Color color = _getStatusColor(status);
 
     return Container(
+      width: 80,
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),

@@ -154,19 +154,22 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
       // Process each timestamp
       for (var timestamp in course.timestamps) {
-        final startDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
-        final endDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
+        // Parse as UTC and convert to Hong Kong time for consistent comparison
+        final startDateTimeUtc = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt(), isUtc: true);
+        final endDateTimeUtc = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt(), isUtc: true);
+        final startDateTime = startDateTimeUtc.add(Duration(hours: 8));
+        final endDateTime = endDateTimeUtc.add(Duration(hours: 8));
 
         // Check if this timestamp is in the selected month
         if (startDateTime.year == selectedMonth.year &&
             startDateTime.month == selectedMonth.month) {
 
-          // Apply tab filter
+          // Apply tab filter - use endDateTime for "Upcoming" to include ongoing classes
           final now = currentDateTimeHK;
-          if (selectedTab == 'Upcoming' && startDateTime.isBefore(now)) continue;
-          if (selectedTab == 'Past' && startDateTime.isAfter(now)) continue;
+          if (selectedTab == 'Upcoming' && endDateTime.isBefore(now)) continue;
+          if (selectedTab == 'Past' && endDateTime.isAfter(now)) continue;
 
-          // Determine status
+          // Determine status based on end time
           String status = 'Scheduled';
           if (course.isDeleted == true) {
             status = 'Canceled';
