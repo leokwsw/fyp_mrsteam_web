@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/custom_text_field.dart';
@@ -373,53 +377,53 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
                   // Action Buttons
                   Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        SizedBox(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      SizedBox(
                         width: 120,
                         height: 48,
                         child: ElevatedButton(
                           onPressed: isSaving ? null : () => context.go('/class'),
                           style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.textPrimary,
-                          elevation: 0,
-                          side: BorderSide(color: AppColors.inputBorder),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.textPrimary,
+                            elevation: 0,
+                            side: BorderSide(color: AppColors.inputBorder),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
+                          child: Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
-                        child: Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                       ),
-                    ),
-                        const SizedBox(width: 16),
-                        SizedBox(
+                      const SizedBox(width: 16),
+                      SizedBox(
                         width: 120,
                         height: 48,
                         child: ElevatedButton(
                           onPressed: isSaving ? null : () => _saveClass(),
                           style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
+                          child: isSaving
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text('Save', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
-                        child: isSaving
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                            )
-                    : Text('Save', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
                 ],
               ),
             ),
@@ -544,9 +548,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 ),
                 // Existing schools
                 ...schools.map((school) => DropdownMenuItem(
-                  value: school.id,
-                  child: Text(school.name),
-                )),
+                      value: school.id,
+                      child: Text(school.name),
+                    )),
               ],
               onChanged: (value) {
                 if (value == '__create_new__') {
@@ -587,10 +591,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               hint: Text('Select Tutor', style: TextStyle(color: AppColors.textSecondary)),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
-              items: tutors.map((tutor) => DropdownMenuItem(
-                value: tutor.id,
-                child: Text(tutor.name),
-              )).toList(),
+              items: tutors
+                  .map((tutor) => DropdownMenuItem(
+                        value: tutor.id,
+                        child: Text(tutor.name),
+                      ))
+                  .toList(),
               onChanged: (value) {
                 setState(() => selectedTutorId = value);
               },
@@ -612,7 +618,347 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   }
 }
 
-// Create School Dialog
+// Map Picker Dialog with User Location
+class MapPickerDialog extends StatefulWidget {
+  final double? initialLat;
+  final double? initialLng;
+
+  const MapPickerDialog({
+    Key? key,
+    this.initialLat,
+    this.initialLng,
+  }) : super(key: key);
+
+  @override
+  State<MapPickerDialog> createState() => _MapPickerDialogState();
+}
+
+class _MapPickerDialogState extends State<MapPickerDialog> {
+  LatLng? _selectedLocation;
+  late MapController _mapController;
+  bool _isLoadingLocation = true;
+  String? _locationError;
+
+  // Default location (Hong Kong) as fallback
+  static const LatLng _defaultLocation = LatLng(22.3193, 114.1694);
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+
+    if (widget.initialLat != null && widget.initialLng != null) {
+      _selectedLocation = LatLng(widget.initialLat!, widget.initialLng!);
+      _isLoadingLocation = false;
+    } else {
+      _getCurrentLocation();
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+      _locationError = null;
+    });
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _locationError = 'Location services are disabled. Please enable GPS.';
+          _selectedLocation = _defaultLocation;
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+      // Check and request permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _locationError = 'Location permission denied. Please allow location access.';
+            _selectedLocation = _defaultLocation;
+            _isLoadingLocation = false;
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _locationError = 'Location permission permanently denied. Please enable in browser settings.';
+          _selectedLocation = _defaultLocation;
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+      // Get current position with longer timeout for web
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 30),
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          _selectedLocation = LatLng(position.latitude, position.longitude);
+          _isLoadingLocation = false;
+          _locationError = null;
+        });
+
+        // Move map to user location
+        Future.delayed(Duration(milliseconds: 100), () {
+          if (mounted) {
+            _mapController.move(_selectedLocation!, 15);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _locationError = 'Could not get location: ${e.toString().split(':').last.trim()}';
+          _selectedLocation = _defaultLocation;
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
+  LatLng get _mapCenter {
+    return _selectedLocation ?? _defaultLocation;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 700,
+        height: 600,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Location',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Click on the map to select a location',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+
+            // Location Error Warning
+            if (_locationError != null && !_isLoadingLocation) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _locationError!,
+                        style: TextStyle(color: Colors.orange[800], fontSize: 12),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _getCurrentLocation,
+                      child: Text('Retry', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+
+            // Map
+            Expanded(
+              child: _isLoadingLocation
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Getting your location...',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Please allow location access when prompted',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                          const SizedBox(height: 24),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedLocation = _defaultLocation;
+                                _isLoadingLocation = false;
+                                _locationError = 'Skipped location detection';
+                              });
+                            },
+                            child: Text('Skip and use default location'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _mapCenter,
+                          initialZoom: 15,
+                          onTap: (tapPosition, latlng) {
+                            setState(() {
+                              _selectedLocation = latlng;
+                            });
+                          },
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.mrsteam.tutortrack',
+                            tileProvider: CancellableNetworkTileProvider(),
+                          ),
+                          if (_selectedLocation != null)
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: _selectedLocation!,
+                                  width: 40,
+                                  height: 40,
+                                  child: Icon(
+                                    Icons.location_pin,
+                                    color: Colors.red,
+                                    size: 40,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+
+            // Selected Coordinates Display
+            if (_selectedLocation != null && !_isLoadingLocation)
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Latitude: ${_selectedLocation!.latitude.toStringAsFixed(6)}, Longitude: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // My Location Button
+                TextButton.icon(
+                  onPressed: _isLoadingLocation ? null : _getCurrentLocation,
+                  icon: _isLoadingLocation
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.my_location, size: 18),
+                  label: Text(_isLoadingLocation ? 'Locating...' : 'My Location'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                  ),
+                ),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      height: 44,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.cardBorder),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 140,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: _selectedLocation != null && !_isLoadingLocation
+                            ? () {
+                                Navigator.of(context).pop({
+                                  'lat': _selectedLocation!.latitude,
+                                  'lng': _selectedLocation!.longitude,
+                                });
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text('Confirm', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Create School Dialog with Map Picker
 class CreateSchoolDialog extends StatefulWidget {
   final Function(SchoolRes) onSchoolCreated;
 
@@ -625,11 +971,31 @@ class CreateSchoolDialog extends StatefulWidget {
 class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _latController = TextEditingController();
-  final TextEditingController _longController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+
+  double? selectedLat;
+  double? selectedLng;
 
   bool isSaving = false;
   String? errorMessage;
+
+  Future<void> _openMapPicker() async {
+    final result = await showDialog<Map<String, double>>(
+      context: context,
+      builder: (context) => MapPickerDialog(
+        initialLat: selectedLat,
+        initialLng: selectedLng,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        selectedLat = result['lat'];
+        selectedLng = result['lng'];
+        _locationController.text = 'Lat: ${selectedLat!.toStringAsFixed(6)}, Lng: ${selectedLng!.toStringAsFixed(6)}';
+      });
+    }
+  }
 
   Future<void> _createSchool() async {
     // Validate
@@ -638,11 +1004,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
       return;
     }
 
-    final lat = double.tryParse(_latController.text.trim());
-    final long = double.tryParse(_longController.text.trim());
-
-    if (lat == null || long == null) {
-      setState(() => errorMessage = 'Please enter valid GPS coordinates');
+    if (selectedLat == null || selectedLng == null) {
+      setState(() => errorMessage = 'Please select a location on the map');
       return;
     }
 
@@ -654,7 +1017,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     try {
       final request = CreateSchoolReq(
         _nameController.text.trim(),
-        GpsLocation(lat, long),
+        GpsLocation(selectedLat!, selectedLng!),
       );
 
       final response = await _schoolApi.createSchool(request);
@@ -684,7 +1047,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        width: 450,
+        width: 500,
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -764,7 +1127,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             ),
             const SizedBox(height: 24),
 
-            // GPS Coordinates
+            // GPS Location with Map Picker
             Text(
               'GPS Location *',
               style: TextStyle(
@@ -778,12 +1141,13 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _latController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    controller: _locationController,
+                    readOnly: true,
                     decoration: InputDecoration(
-                      hintText: 'Latitude',
+                      hintText: 'Click to select location on map',
                       filled: true,
                       fillColor: AppColors.inputBackground,
+                      prefixIcon: Icon(Icons.location_on, color: AppColors.textSecondary),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: AppColors.inputBorder),
@@ -797,38 +1161,26 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                         borderSide: BorderSide(color: AppColors.primary, width: 2),
                       ),
                     ),
+                    onTap: _openMapPicker,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _longController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      hintText: 'Longitude',
-                      filled: true,
-                      fillColor: AppColors.inputBackground,
-                      border: OutlineInputBorder(
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _openMapPicker,
+                    icon: Icon(Icons.map, color: Colors.white, size: 20),
+                    label: Text('Map', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppColors.inputBorder),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppColors.inputBorder),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
-                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 16),
                     ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'e.g., Hong Kong: 22.3193, 114.1694',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 32),
 
@@ -836,30 +1188,37 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
-                  child: Text('Cancel'),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: isSaving ? null : _createSchool,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                SizedBox(
+                  width: 100,
+                  height: 44,
+                  child: TextButton(
+                    onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                    child: Text('Cancel'),
                   ),
-                  child: isSaving
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text('Create School', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 140,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: isSaving ? null : _createSchool,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: isSaving
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text('Create School', style: TextStyle(color: Colors.white)),
+                  ),
                 ),
               ],
             ),
@@ -872,8 +1231,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   @override
   void dispose() {
     _nameController.dispose();
-    _latController.dispose();
-    _longController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 }
