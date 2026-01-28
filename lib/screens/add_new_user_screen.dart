@@ -23,41 +23,30 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _qualificationsController = TextEditingController();
   final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
-  
+
   String? selectedDepartment;
   String selectedRole = 'Tutor';
-  String generatedUsername = '';
   String generatedPassword = '';
   bool showPassword = false;
   bool isLoading = false;
   String? errorMessage;
 
+  // Store the created user's username from API response
+  String? createdUsername;
+
   @override
   void initState() {
     super.initState();
-    _generateCredentials();
+    _generatePassword();
   }
 
-  void _generateCredentials() {
+  void _generatePassword() {
     // Generate random password
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
     generatedPassword = String.fromCharCodes(
       Iterable.generate(8, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
     );
-    
-    // Generate Username based on role
-    _updateUsername();
-  }
-
-  void _updateUsername() {
-    setState(() {
-      if (selectedRole == 'Admin') {
-        generatedUsername = 'A${(Random().nextInt(900) + 100).toString().padLeft(3, '0')}';
-      } else {
-        generatedUsername = 'T${(Random().nextInt(900) + 100).toString().padLeft(3, '0')}';
-      }
-    });
   }
 
   void _copyToClipboard(String text, String label) {
@@ -88,17 +77,19 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
     });
 
     try {
+      // Don't pass username - API will auto-generate it
       final request = CreateUserReq(
         _emailController.text.trim(),
         generatedPassword,
         _fullNameController.text.trim(),
-        username: generatedUsername,
         role: selectedRole.toLowerCase(),
       );
 
-      await _usersApi.createUser(request);
+      final response = await _usersApi.createUser(request);
 
       if (mounted) {
+        // Get the username from the response
+        createdUsername = response.username;
         // Show success dialog with credentials
         _showSuccessDialog();
       }
@@ -129,6 +120,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Row(
           children: [
             Icon(Icons.check_circle, color: Colors.green, size: 28),
@@ -142,7 +134,11 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
           children: [
             Text('Please save these credentials:'),
             const SizedBox(height: 16),
-            _buildCredentialRow('Username', generatedUsername),
+            if (createdUsername != null && createdUsername!.isNotEmpty)
+              _buildCredentialRow('Username', createdUsername!),
+            if (createdUsername != null && createdUsername!.isNotEmpty)
+              const SizedBox(height: 8),
+            _buildCredentialRow('Email', _emailController.text.trim()),
             const SizedBox(height: 8),
             _buildCredentialRow('Password', generatedPassword),
             const SizedBox(height: 16),
@@ -180,7 +176,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
       child: Row(
         children: [
           Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600)),
-          Expanded(child: Text(value)),
+          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
           IconButton(
             icon: Icon(Icons.copy, size: 18),
             onPressed: () => _copyToClipboard(value, label),
@@ -243,7 +239,9 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                   const SizedBox(height: 24),
 
                   // Department
-                  _buildDropdownField('Department', selectedDepartment, 
+                  _buildDropdownField(
+                    'Department',
+                    selectedDepartment,
                     ['Math', 'Science', 'English', 'History', 'Physics'],
                     (value) => setState(() => selectedDepartment = value),
                   ),
@@ -287,9 +285,9 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Auto-Generated Credentials Section
+                  // Account Settings Section
                   Text(
-                    'Auto-Generated Credentials',
+                    'Account Settings',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -298,23 +296,29 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                   const SizedBox(height: 16),
 
                   // Account Role
-                  _buildDropdownField('Account Role', selectedRole,
+                  _buildDropdownField(
+                    'Account Role *',
+                    selectedRole,
                     ['Tutor', 'Admin'],
                     (value) {
                       setState(() {
                         selectedRole = value!;
-                        _updateUsername();
                       });
                     },
                   ),
                   const SizedBox(height: 24),
 
-                  // Username
-                  _buildReadOnlyFieldWithCopy('Username', generatedUsername),
-                  const SizedBox(height: 24),
-
                   // Password
                   _buildPasswordField(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Username will be auto-generated by the system',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                   const SizedBox(height: 40),
 
                   // Action Buttons
@@ -323,6 +327,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                     children: [
                       SizedBox(
                         width: 120,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: isLoading ? null : () => context.go('/account'),
                           style: ElevatedButton.styleFrom(
@@ -330,17 +335,37 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
                             foregroundColor: AppColors.textPrimary,
                             elevation: 0,
                             side: BorderSide(color: AppColors.inputBorder),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                          child: Text('Cancel'),
+                          child: Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       ),
                       const SizedBox(width: 16),
                       SizedBox(
                         width: 120,
-                        child: CustomButton(
-                          text: isLoading ? 'Saving...' : 'Save',
-                          onPressed: isLoading ? () {} : () => _saveUser(),
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : () => _saveUser(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: isLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ],
@@ -376,49 +401,12 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
-              hint: Text('Select $label'),
+              hint: Text('Select ${label.replaceAll(' *', '')}'),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
-              items: items
-                  .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                  .toList(),
+              items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
               onChanged: onChanged,
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReadOnlyFieldWithCopy(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.inputBackground,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.inputBorder),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(value, style: TextStyle(fontSize: 16)),
-              ),
-              IconButton(
-                icon: Icon(Icons.copy, size: 20, color: AppColors.textSecondary),
-                onPressed: () => _copyToClipboard(value, label),
-              ),
-            ],
           ),
         ),
       ],
@@ -430,7 +418,7 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Password',
+          'Generated Password',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -463,6 +451,14 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
               IconButton(
                 icon: Icon(Icons.copy, size: 20, color: AppColors.textSecondary),
                 onPressed: () => _copyToClipboard(generatedPassword, 'Password'),
+              ),
+              IconButton(
+                icon: Icon(Icons.refresh, size: 20, color: AppColors.textSecondary),
+                onPressed: () {
+                  _generatePassword();
+                  setState(() {});
+                },
+                tooltip: 'Generate new password',
               ),
             ],
           ),
