@@ -82,6 +82,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final schoolsRes = futures[4] as SchoolListRes;
 
       // Build lookup maps
+      tutorsMap.clear();
+      schoolsMap.clear();
+      coursesMap.clear();
+
       for (var tutor in tutorsRes.items) {
         if (tutor.id != null) {
           tutorsMap[tutor.id!] = tutor;
@@ -193,6 +197,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Filter attendance to only show past classes
+  List<AttendanceRes> get filteredAttendance {
+    final now = DateTime.now();
+    return todayAttendance.where((attendance) {
+      try {
+        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
+        // Only include if the class has already started
+        return scheduledStart.isBefore(now);
+      } catch (e) {
+        return true;
+      }
+    }).toList()
+      ..sort((a, b) {
+        // Sort by start time descending (most recent first)
+        return b.timestamp.start.compareTo(a.timestamp.start);
+      });
+  }
+
+  // Calculate attendance stats from filtered attendance (past classes only)
+  Map<String, int> get attendanceStatsFromFiltered {
+    final filtered = filteredAttendance;
+    final present = filtered.where((a) => a.checked).length;
+    final absent = filtered.where((a) => !a.checked).length;
+    final total = filtered.length;
+    final rate = total > 0 ? (present / total * 100).round() : 0;
+    
+    return {
+      'present': present,
+      'absent': absent,
+      'total': total,
+      'rate': rate,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -225,9 +263,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final stats = dashboardStats!;
-    final attendanceStats = stats.attendance.summary;
     final courseStats = stats.course.summary;
     final userStats = stats.users;
+    final attendanceFromFiltered = attendanceStatsFromFiltered;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -309,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Attendance Stats
+              // Attendance Stats - using filtered stats (past classes only)
               Row(
                 children: [
                   Expanded(
@@ -322,21 +360,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Present Today',
-                      value: attendanceStats.checked.toString(),
+                      value: attendanceFromFiltered['present'].toString(),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: StatCard(
                       label: 'Absent Today',
-                      value: attendanceStats.unchecked.toString(),
+                      value: attendanceFromFiltered['absent'].toString(),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: StatCard(
                       label: 'Attendance Rate',
-                      value: '${attendanceStats.attendanceRate.toStringAsFixed(0)}%',
+                      value: '${attendanceFromFiltered['rate']}%',
                     ),
                   ),
                 ],
@@ -442,7 +480,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAttendanceTable() {
-    if (todayAttendance.isEmpty) {
+    // Use filtered attendance (only past classes)
+    final pastAttendance = filteredAttendance;
+
+    if (pastAttendance.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
@@ -481,13 +522,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          ...todayAttendance.take(5).map((attendance) {
+          ...pastAttendance.take(5).map((attendance) {
             final tutor = tutorsMap[attendance.tutorId];
             final course = coursesMap[attendance.courseId];
             final status = _getAttendanceStatus(attendance);
             final statusType = _getAttendanceStatusType(status);
             
-            String checkInTime = 'N/A';
+            String checkInTime = '-';
             if (attendance.checkInTime != null) {
               try {
                 final dt = DateTime.parse(attendance.checkInTime!);
@@ -522,8 +563,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentActivity() {
-    // Build activity from today's attendance
-    final recentActivities = todayAttendance.take(5).map((attendance) {
+    // Use filtered attendance (only past classes)
+    final pastAttendance = filteredAttendance;
+
+    // Build activity from past attendance only
+    final recentActivities = pastAttendance.take(5).map((attendance) {
       final tutor = tutorsMap[attendance.tutorId];
       final course = coursesMap[attendance.courseId];
       final isCheckedIn = attendance.checked;

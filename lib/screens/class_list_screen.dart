@@ -35,7 +35,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
   List<CourseRes> allCourses = [];
   Map<String, SchoolRes> schoolsMap = {};
   Map<String, UserResponse> tutorsMap = {};
-  
+
   // Filter options
   List<CourseRes> courseOptions = [];
   List<SchoolRes> schoolOptions = [];
@@ -49,7 +49,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
     super.initState();
     currentDateTimeHK = _getHongKongTime();
     _loadData();
-    
+
     Future.delayed(Duration.zero, () {
       _startTimeUpdate();
     });
@@ -92,6 +92,20 @@ class _ClassListScreenState extends State<ClassListScreen> {
       schoolOptions = schoolsRes.items;
       tutorOptions = tutorsRes.items;
 
+      // Validate selected values exist in options
+      if (selectedCourseId != null &&
+          !courseOptions.any((c) => c.id == selectedCourseId)) {
+        selectedCourseId = null;
+      }
+      if (selectedSchoolId != null &&
+          !schoolOptions.any((s) => s.id == selectedSchoolId)) {
+        selectedSchoolId = null;
+      }
+      if (selectedTutorId != null &&
+          !tutorOptions.any((t) => t.id == selectedTutorId)) {
+        selectedTutorId = null;
+      }
+
       // Build lookup maps
       for (var school in schoolOptions) {
         if (school.id != null) {
@@ -132,6 +146,167 @@ class _ClassListScreenState extends State<ClassListScreen> {
     );
   }
 
+  // Show Class Details Dialog
+  void _showClassDetails(ClassListItem classItem) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Class Details',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildDetailRow('Class Name', classItem.className),
+              const SizedBox(height: 16),
+              _buildDetailRow('School', classItem.schoolName),
+              const SizedBox(height: 16),
+              _buildDetailRow('Date', classItem.date),
+              const SizedBox(height: 16),
+              _buildDetailRow('Time', classItem.time),
+              const SizedBox(height: 16),
+              _buildDetailRow('Tutor', classItem.tutorName),
+              const SizedBox(height: 16),
+              _buildDetailRow('Location', classItem.location),
+              const SizedBox(height: 16),
+              _buildStatusRow('Status', classItem.status),
+              const SizedBox(height: 16),
+              _buildDetailRow('Overview', classItem.overview),
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.cardBorder),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text('Close'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 120,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        context.push('/class/edit/${classItem.courseId}');
+                      },
+                      icon: Icon(Icons.edit, size: 18, color: Colors.white),
+                      label: Text('Edit', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value.isNotEmpty ? value : '-',
+            style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusRow(String label, String status) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: _getStatusColor(status).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: _getStatusColor(status)),
+          ),
+          child: Text(
+            status,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _getStatusColor(status),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Canceled':
+        return Color(0xFFB71C1C);
+      case 'Completed':
+        return Colors.green;
+      default:
+        return Color(0xFF1E3A5F);
+    }
+  }
+
   // Get filtered class list
   List<ClassListItem> get filteredClasses {
     List<ClassListItem> classList = [];
@@ -152,7 +327,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
       for (var timestamp in course.timestamps) {
         final startDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
         final endDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
-        
+
         // Apply tab filter
         final now = currentDateTimeHK;
         if (selectedTab == 'Upcoming' && startDateTime.isBefore(now)) continue;
@@ -184,13 +359,14 @@ class _ClassListScreenState extends State<ClassListScreen> {
           location: course.room,
           status: status,
           startDateTime: startDateTime,
+          overview: course.overview,
         ));
       }
     }
 
     // Sort by date
     classList.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
-    
+
     return classList;
   }
 
@@ -270,39 +446,8 @@ class _ClassListScreenState extends State<ClassListScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Filters and New Class Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      _buildCourseDropdown(),
-                      _buildSchoolDropdown(),
-                      _buildTutorDropdown(),
-                      _buildStatusDropdown(),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.refresh),
-                        onPressed: _loadData,
-                        tooltip: 'Refresh',
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 140,
-                        child: CustomButton(
-                          text: 'New Class',
-                          onPressed: () => context.push('/class/create'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              // Filters and New Class Button - Responsive Layout
+              _buildFiltersSection(),
               const SizedBox(height: 24),
 
               // Content
@@ -339,6 +484,90 @@ class _ClassListScreenState extends State<ClassListScreen> {
     );
   }
 
+  Widget _buildFiltersSection() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const dropdownWidth = 180.0;
+        const spacing = 16.0;
+        const buttonWidth = 140.0;
+
+        if (constraints.maxWidth >= 900) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    _buildCourseDropdown(dropdownWidth),
+                    _buildSchoolDropdown(dropdownWidth),
+                    _buildTutorDropdown(dropdownWidth),
+                    _buildStatusDropdown(dropdownWidth),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.refresh),
+                    onPressed: _loadData,
+                    tooltip: 'Refresh',
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: CustomButton(
+                      text: 'New Class',
+                      onPressed: () => context.push('/class/create'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        } else {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  _buildCourseDropdown(dropdownWidth),
+                  _buildSchoolDropdown(dropdownWidth),
+                  _buildTutorDropdown(dropdownWidth),
+                  _buildStatusDropdown(dropdownWidth),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.refresh),
+                    onPressed: _loadData,
+                    tooltip: 'Refresh',
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: CustomButton(
+                      text: 'New Class',
+                      onPressed: () => context.push('/class/create'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        }
+      },
+    );
+  }
+
   String _formatHongKongDateTime(DateTime dt) {
     final days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final dayName = days[dt.weekday % 7];
@@ -350,148 +579,154 @@ class _ClassListScreenState extends State<ClassListScreen> {
     return '$dayName, $day/$month/${dt.year} $hour:$minute';
   }
 
-  Widget _buildCourseDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedCourseId,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Class', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
+  Widget _buildCourseDropdown(double width) {
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: selectedCourseId,
+            hint: Text('All Classes', style: TextStyle(fontSize: 14)),
+            isExpanded: true,
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem(value: null, child: Text('All Classes')),
+              ...courseOptions.map((course) => DropdownMenuItem(
+                value: course.id,
+                child: Text(
+                  course.name,
+                  style: TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              )),
             ],
+            onChanged: (value) => setState(() => selectedCourseId = value),
           ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem(value: null, child: Text('All Classes')),
-            ...courseOptions.map((course) => DropdownMenuItem(
-              value: course.id,
-              child: Text(course.name, style: TextStyle(fontSize: 14)),
-            )),
-          ],
-          onChanged: (value) => setState(() => selectedCourseId = value),
         ),
       ),
     );
   }
 
-  Widget _buildSchoolDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedSchoolId,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('School', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
-            ],
-          ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem(value: null, child: Text('All Schools')),
-            DropdownMenuItem(
-              value: '__create_new__',
-              child: Row(
-                children: [
-                  Icon(Icons.add, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Text('Create New School', style: TextStyle(fontSize: 14, color: AppColors.primary)),
-                ],
+  Widget _buildSchoolDropdown(double width) {
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: selectedSchoolId,
+            hint: Text('All Schools', style: TextStyle(fontSize: 14)),
+            isExpanded: true,
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem(value: null, child: Text('All Schools')),
+              DropdownMenuItem(
+                value: '__create_new__',
+                child: Row(
+                  children: [
+                    Icon(Icons.add, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Create New School',
+                        style: TextStyle(fontSize: 14, color: AppColors.primary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            ...schoolOptions.map((school) => DropdownMenuItem(
-              value: school.id,
-              child: Text(school.name, style: TextStyle(fontSize: 14)),
-            )),
-          ],
-          onChanged: (value) {
-            if (value == '__create_new__') {
-              _showCreateSchoolDialog();
-            } else {
-              setState(() => selectedSchoolId = value);
-            }
-          },
+              ...schoolOptions.map((school) => DropdownMenuItem(
+                value: school.id,
+                child: Text(
+                  school.name,
+                  style: TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              )),
+            ],
+            onChanged: (value) {
+              if (value == '__create_new__') {
+                _showCreateSchoolDialog();
+              } else {
+                setState(() => selectedSchoolId = value);
+              }
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTutorDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedTutorId,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Tutor', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
+  Widget _buildTutorDropdown(double width) {
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: selectedTutorId,
+            hint: Text('All Tutors', style: TextStyle(fontSize: 14)),
+            isExpanded: true,
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem(value: null, child: Text('All Tutors')),
+              ...tutorOptions.map((tutor) => DropdownMenuItem(
+                value: tutor.id,
+                child: Text(
+                  tutor.name,
+                  style: TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              )),
             ],
+            onChanged: (value) => setState(() => selectedTutorId = value),
           ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem(value: null, child: Text('All Tutors')),
-            ...tutorOptions.map((tutor) => DropdownMenuItem(
-              value: tutor.id,
-              child: Text(tutor.name, style: TextStyle(fontSize: 14)),
-            )),
-          ],
-          onChanged: (value) => setState(() => selectedTutorId = value),
         ),
       ),
     );
   }
 
-  Widget _buildStatusDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedStatus,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Status', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
+  Widget _buildStatusDropdown(double width) {
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: selectedStatus,
+            hint: Text('All Status', style: TextStyle(fontSize: 14)),
+            isExpanded: true,
+            icon: Icon(Icons.arrow_drop_down, size: 20),
+            items: [
+              DropdownMenuItem(value: null, child: Text('All Status')),
+              DropdownMenuItem(value: 'Scheduled', child: Text('Scheduled')),
+              DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+              DropdownMenuItem(value: 'Canceled', child: Text('Canceled')),
             ],
+            onChanged: (value) => setState(() => selectedStatus = value),
           ),
-          icon: Container(),
-          items: [
-            DropdownMenuItem(value: null, child: Text('All Status')),
-            DropdownMenuItem(value: 'Scheduled', child: Text('Scheduled')),
-            DropdownMenuItem(value: 'Completed', child: Text('Completed')),
-            DropdownMenuItem(value: 'Canceled', child: Text('Canceled')),
-          ],
-          onChanged: (value) => setState(() => selectedStatus = value),
         ),
       ),
     );
@@ -551,7 +786,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
   Widget _buildClassList() {
     final classes = filteredClasses;
-    
+
     if (classes.isEmpty) {
       return Center(
         child: Padding(
@@ -625,76 +860,69 @@ class _ClassListScreenState extends State<ClassListScreen> {
   }
 
   Widget _buildClassRow(ClassListItem classItem) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              classItem.className,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+    return InkWell(
+      onTap: () => _showClassDetails(classItem),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5))),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                classItem.className,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              classItem.schoolName,
-              style: TextStyle(fontSize: 14),
+            Expanded(
+              flex: 2,
+              child: Text(
+                classItem.schoolName,
+                style: TextStyle(fontSize: 14),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              classItem.tutorName,
-              style: TextStyle(fontSize: 14),
+            Expanded(
+              flex: 2,
+              child: Text(
+                classItem.tutorName,
+                style: TextStyle(fontSize: 14),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              classItem.date,
-              style: TextStyle(fontSize: 14),
+            Expanded(
+              flex: 1,
+              child: Text(
+                classItem.date,
+                style: TextStyle(fontSize: 14),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              classItem.time,
-              style: TextStyle(fontSize: 14),
+            Expanded(
+              flex: 1,
+              child: Text(
+                classItem.time,
+                style: TextStyle(fontSize: 14),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              classItem.location,
-              style: TextStyle(fontSize: 14),
+            Expanded(
+              flex: 1,
+              child: Text(
+                classItem.location,
+                style: TextStyle(fontSize: 14),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: _buildStatusBadge(classItem.status),
-          ),
-        ],
+            Expanded(
+              flex: 1,
+              child: _buildStatusBadge(classItem.status),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildStatusBadge(String status) {
-    Color color;
-    switch (status) {
-      case 'Canceled':
-        color = Color(0xFFB71C1C);
-        break;
-      case 'Completed':
-        color = Colors.green;
-        break;
-      default:
-        color = Color(0xFF1E3A5F);
-    }
+    Color color = _getStatusColor(status);
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -726,6 +954,7 @@ class ClassListItem {
   final String location;
   final String status;
   final DateTime startDateTime;
+  final String overview;
 
   ClassListItem({
     required this.courseId,
@@ -737,6 +966,7 @@ class ClassListItem {
     required this.location,
     required this.status,
     required this.startDateTime,
+    required this.overview,
   });
 }
 
@@ -756,7 +986,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
   final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
-  
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -823,7 +1053,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               // School Name
               Text('School Name *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
@@ -842,7 +1072,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               // GPS Coordinates
               Text('GPS Coordinates (Optional)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
@@ -873,7 +1103,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                   ),
                 ],
               ),
-              
+
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -897,32 +1127,39 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                   ),
                 ),
               ],
-              
+
               const SizedBox(height: 24),
-              
+
               // Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                    child: Text('Cancel'),
+                  SizedBox(
+                    width: 100,
+                    height: 48,
+                    child: TextButton(
+                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                      child: Text('Cancel'),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _createSchool,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  SizedBox(
+                    width: 140,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _createSchool,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: _isLoading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text('Create School', style: TextStyle(color: Colors.white)),
                     ),
-                    child: _isLoading
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : Text('Create School', style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
