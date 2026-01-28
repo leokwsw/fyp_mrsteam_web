@@ -279,7 +279,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    _buildInfoRow('User ID', user?.id ?? '-', 'Role', _capitalizeFirst(user?.role)),
+                    _buildInfoRow('Role', _capitalizeFirst(user?.role),"",""),
                     const Divider(height: 32),
                     _buildInfoRow('Created At', _formatDate(user?.createdAt), 'Last Updated', _formatDate(user?.updatedAt)),
                   ],
