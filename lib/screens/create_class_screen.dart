@@ -84,6 +84,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       _showError('Please enter class name');
       return;
     }
+    if (_overviewController.text.trim().isEmpty) {
+      _showError('Please enter overview');
+      return;
+    }
     if (selectedSchoolId == null) {
       _showError('Please select a school');
       return;
@@ -255,7 +259,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Overview / Notification Content',
+                        'Overview / Notification Content *',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
