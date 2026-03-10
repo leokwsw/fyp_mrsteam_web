@@ -7,6 +7,8 @@ class CustomTextField extends StatelessWidget {
   final String placeholder;
   final bool isPassword;
   final TextEditingController? controller;
+  final int? maxLength;
+  final TextInputType? keyboardType;
 
   const CustomTextField({
     Key? key,
@@ -14,6 +16,8 @@ class CustomTextField extends StatelessWidget {
     required this.placeholder,
     this.isPassword = false,
     this.controller,
+    this.maxLength,
+    this.keyboardType,
   }) : super(key: key);
 
   @override
@@ -27,6 +31,9 @@ class CustomTextField extends StatelessWidget {
           controller: controller,
           obscureText: isPassword,
           style: AppTextStyles.inputText,
+          maxLength: maxLength,
+          keyboardType: keyboardType,
+          textCapitalization: maxLength == 4 ? TextCapitalization.characters : TextCapitalization.none,
           decoration: InputDecoration(
             hintText: placeholder,
             hintStyle: AppTextStyles.inputText.copyWith(

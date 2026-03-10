@@ -123,6 +123,10 @@ dependencies:
   # Geolocator package
   # https://pub.dev/packages/geolocator
 
+  google_maps_flutter: ^2.5.0
+  # Google Maps Flutter package
+  # https://pub.dev/packages/google_maps_flutter
+
   go_router: 16.2.2
   # Go router package
   # https://pub.dev/packages/go_router
@@ -158,6 +162,10 @@ dependencies:
   shared_preferences: 2.5.3
   # native SharedPreferences/UserDefaults helper
   # https://pub.dev/packages/shared_preferences
+
+  file_picker: ^10.1.0
+  # File picker package for uploading files
+  # https://pub.dev/packages/file_picker
 
 dev_dependencies:
   flutter_test:
