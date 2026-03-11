@@ -1,6 +1,4 @@
-import 'package:fyp_mrsteam_web/data/model/response/res_file.dart';
 import 'package:json_annotation/json_annotation.dart';
-
 part 'res_course.g.dart';
 
 @JsonSerializable()
@@ -30,6 +28,7 @@ class CourseRes {
   final String schoolId;
   final String tutorId;
   final List<CourseTimestampRes> timestamps;
+  final String? subjectShortName;
   final bool? isDeleted;
   final String? createdAt;
   final String? updatedAt;
@@ -43,6 +42,7 @@ class CourseRes {
     this.tutorId,
     this.timestamps, {
     this.id,
+    this.subjectShortName,
     this.isDeleted,
     this.createdAt,
     this.updatedAt,
@@ -75,11 +75,13 @@ class CourseListRes {
       CourseListRes.fromJson(json);
 }
 
+/// 課程文件響應
+/// 注意：後端返回 files 為 List<String>（文件路徑），不是 FileRes 對象
 @JsonSerializable()
 class CourseFilesRes {
   final String courseId;
   final String courseName;
-  final List<FileRes> files;
+  final List<String> files;
 
   CourseFilesRes(this.courseId, this.courseName, this.files);
 
