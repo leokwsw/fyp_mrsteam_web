@@ -16,14 +16,16 @@ CourseRes _$CourseResFromJson(Map<String, dynamic> json) => CourseRes(
   json['name'] as String,
   json['overview'] as String,
   json['room'] as String,
-  (json['files'] as List<dynamic>).map((e) => e as String).toList(),
+  _parseFiles(json['files']),
   json['schoolId'] as String,
   json['tutorId'] as String,
   (json['timestamps'] as List<dynamic>)
       .map((e) => CourseTimestampRes.fromJson(e as Map<String, dynamic>))
       .toList(),
   id: json['_id'] as String?,
-  subjectShortName: json['subjectShortName'] as String?,
+  courseCode: CourseRes._readCourseCode(json, 'courseCode') as String?,
+  subjectShortName:
+      CourseRes._readSubjectShortName(json, 'subjectShortName') as String?,
   isDeleted: json['isDeleted'] as bool?,
   createdAt: json['createdAt'] as String?,
   updatedAt: json['updatedAt'] as String?,
@@ -38,6 +40,7 @@ Map<String, dynamic> _$CourseResToJson(CourseRes instance) => <String, dynamic>{
   'schoolId': instance.schoolId,
   'tutorId': instance.tutorId,
   'timestamps': instance.timestamps,
+  'courseCode': instance.courseCode,
   'subjectShortName': instance.subjectShortName,
   'isDeleted': instance.isDeleted,
   'createdAt': instance.createdAt,
@@ -68,7 +71,7 @@ CourseFilesRes _$CourseFilesResFromJson(Map<String, dynamic> json) =>
     CourseFilesRes(
       json['courseId'] as String,
       json['courseName'] as String,
-      (json['files'] as List<dynamic>).map((e) => e as String).toList(),
+      _parseFiles(json['files']),
     );
 
 Map<String, dynamic> _$CourseFilesResToJson(CourseFilesRes instance) =>

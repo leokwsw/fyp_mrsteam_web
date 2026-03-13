@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
@@ -13,6 +15,7 @@ import '../data/api/api_provider_files.dart';
 import '../data/api/api_provider_school.dart';
 import '../data/api/api_provider_users.dart';
 import '../data/model/request/req_course.dart';
+import '../data/model/response/res_course_file.dart';
 import '../data/model/request/req_file.dart';
 import '../data/model/request/req_school.dart';
 import '../data/model/response/res_course.dart';
@@ -28,43 +31,23 @@ class EditClassScreen extends StatefulWidget {
   State<EditClassScreen> createState() => _EditClassScreenState();
 }
 
-/// Unified file item model for both existing and newly uploaded files.
+/// 已上傳文件項目（統一模型：既用於已有文件也用於新上傳文件）
 class UploadedFileItem {
   final String originalName;
-  final String displayName;
   final String path;
   final String? url;
   final int size;
   final String mimetype;
-  final bool isExisting;
-
-  /// Index in courseRes.files[] — only set for existing files.
-  /// Used to call getCourseFileSignedUrl(courseId, fileIndex).
-  final int? fileIndex;
+  final bool isExisting; // 標記是否為從服務端載入的已有文件
 
   UploadedFileItem({
     required this.originalName,
-    String? displayName,
     required this.path,
     this.url,
     required this.size,
     required this.mimetype,
     this.isExisting = false,
-    this.fileIndex,
-  }) : displayName = displayName ?? originalName;
-
-  UploadedFileItem copyWith({String? displayName}) {
-    return UploadedFileItem(
-      originalName: originalName,
-      displayName: displayName ?? this.displayName,
-      path: path,
-      url: url,
-      size: size,
-      mimetype: mimetype,
-      isExisting: isExisting,
-      fileIndex: fileIndex,
-    );
-  }
+  });
 }
 
 class _EditClassScreenState extends State<EditClassScreen> {
@@ -88,8 +71,8 @@ class _EditClassScreenState extends State<EditClassScreen> {
   List<SchoolRes> schools = [];
   List<UserResponse> tutors = [];
 
+  /// 統一的文件列表（包含已有文件和新上傳文件）
   List<UploadedFileItem> uploadedFiles = [];
-  List<String> originalFilePaths = [];
 
   CourseRes? existingCourse;
 
@@ -103,6 +86,88 @@ class _EditClassScreenState extends State<EditClassScreen> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  DateTime? _parseAnyDateTime(dynamic value) {
+    if (value == null) return null;
+
+    if (value is DateTime) return value.toLocal();
+
+    if (value is int) {
+      // ms or s timestamp
+      if (value > 1000000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value).toLocal();
+      }
+      if (value > 1000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value * 1000).toLocal();
+      }
+      return null;
+    }
+
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return null;
+
+      final dt = DateTime.tryParse(trimmed);
+      if (dt != null) return dt.toLocal();
+
+      final numeric = int.tryParse(trimmed);
+      if (numeric != null) {
+        if (numeric > 1000000000000) {
+          return DateTime.fromMillisecondsSinceEpoch(numeric).toLocal();
+        }
+        if (numeric > 1000000000) {
+          return DateTime.fromMillisecondsSinceEpoch(numeric * 1000).toLocal();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// 兼容不同 CourseRes 結構，盡可能抓到開始/結束時間
+  Map<String, DateTime?> _extractCourseDateTimes(CourseRes course) {
+    DateTime? start;
+    DateTime? end;
+
+    final dynamic c = course;
+
+    // 1) 優先從 timestamps[0] 讀取
+    try {
+      final timestamps = c.timestamps;
+      if (timestamps is List && timestamps.isNotEmpty) {
+        final dynamic first = timestamps.first;
+        start ??= _parseAnyDateTime(first.start);
+        start ??= _parseAnyDateTime(first.startAt);
+        start ??= _parseAnyDateTime(first.startTime);
+        start ??= _parseAnyDateTime(first.startTimestamp);
+        start ??= _parseAnyDateTime(first.from);
+
+        end ??= _parseAnyDateTime(first.end);
+        end ??= _parseAnyDateTime(first.endAt);
+        end ??= _parseAnyDateTime(first.endTime);
+        end ??= _parseAnyDateTime(first.endTimestamp);
+        end ??= _parseAnyDateTime(first.to);
+      }
+    } catch (_) {}
+
+    // 2) 再嘗試 course 直接字段
+    try {
+      start ??= _parseAnyDateTime(c.startAt);
+      start ??= _parseAnyDateTime(c.startTime);
+      start ??= _parseAnyDateTime(c.start);
+      start ??= _parseAnyDateTime(c.startTimestamp);
+
+      end ??= _parseAnyDateTime(c.endAt);
+      end ??= _parseAnyDateTime(c.endTime);
+      end ??= _parseAnyDateTime(c.end);
+      end ??= _parseAnyDateTime(c.endTimestamp);
+    } catch (_) {}
+
+    return {
+      'start': start,
+      'end': end,
+    };
   }
 
   Future<void> _loadData() async {
@@ -124,28 +189,32 @@ class _EditClassScreenState extends State<EditClassScreen> {
 
       existingCourse = courseRes;
 
+      final dynamic c = courseRes;
+      final timeMap = _extractCourseDateTimes(courseRes);
+      final parsedStart = timeMap['start'];
+      final parsedEnd = timeMap['end'];
+
+      // Populate form fields
       _classNameController.text = courseRes.name;
       _roomController.text = courseRes.room;
       _overviewController.text = courseRes.overview;
+      _subjectCodeController.text = ((c.subjectShortName ?? '') as String).trim();
+
+      _startTimeController.text =
+          parsedStart != null ? _formatDateTime(parsedStart) : '';
+      _endTimeController.text = parsedEnd != null ? _formatDateTime(parsedEnd) : '';
+
       selectedSchoolId = courseRes.schoolId;
       selectedTutorId = courseRes.tutorId;
-      originalFilePaths = List<String>.from(courseRes.files ?? []);
-      _subjectCodeController.text = courseRes.subjectShortName ?? '';
-
-      if (courseRes.timestamps.isNotEmpty) {
-        final firstTimestamp = courseRes.timestamps.first;
-        startDateTime =
-            DateTime.fromMillisecondsSinceEpoch(firstTimestamp.start.toInt());
-        endDateTime =
-            DateTime.fromMillisecondsSinceEpoch(firstTimestamp.end.toInt());
-        _startTimeController.text = _formatDateTime(startDateTime!);
-        _endTimeController.text = _formatDateTime(endDateTime!);
-      }
 
       setState(() {
         schools = schoolsRes.items;
         tutors = tutorsRes.items;
 
+        startDateTime = parsedStart;
+        endDateTime = parsedEnd;
+
+        // Validate selected values exist in options
         if (selectedSchoolId != null &&
             !schools.any((s) => s.id == selectedSchoolId)) {
           selectedSchoolId = null;
@@ -155,10 +224,21 @@ class _EditClassScreenState extends State<EditClassScreen> {
           selectedTutorId = null;
         }
 
+        // 直接使用後端 CourseFile 完整資料（url/path/originalName）
+        uploadedFiles = courseRes.files.map((f) {
+          final name = f.originalName.isNotEmpty ? f.originalName : f.filename;
+          return UploadedFileItem(
+            originalName: name.isNotEmpty ? name : f.path.split('/').last,
+            path: f.path,
+            url: f.url.isNotEmpty ? f.url : null,
+            size: 0,
+            mimetype: _guessMimetype(name.isNotEmpty ? name : f.path),
+            isExisting: true,
+          );
+        }).toList();
+
         isLoading = false;
       });
-
-      _loadExistingFiles();
     } catch (e) {
       setState(() {
         errorMessage = e.toString();
@@ -167,89 +247,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     }
   }
 
-  /// Two-phase load:
-  /// Phase 1 — immediately show files with UUID-based names.
-  /// Phase 2 — background: fetch signed URL via the CORRECT course endpoint
-  ///            (GET /course/:id/files/:index/signed-url) to resolve the
-  ///            original filename from the Content-Disposition header.
-  Future<void> _loadExistingFiles() async {
-    if (originalFilePaths.isEmpty) return;
-
-    setState(() => isLoadingFiles = true);
-
-    // Phase 1: build items with index tracked, show immediately
-    final items = List.generate(originalFilePaths.length, (index) {
-      final path = originalFilePaths[index];
-      final serverFileName = path.split('/').last;
-      return UploadedFileItem(
-        originalName: serverFileName,
-        path: path,
-        size: 0,
-        mimetype: _guessMimetype(serverFileName),
-        isExisting: true,
-        fileIndex: index, // ← critical: store position in courseRes.files[]
-      );
-    });
-
-    if (mounted) {
-      setState(() {
-        uploadedFiles = List.from(items);
-        isLoadingFiles = false;
-      });
-    }
-
-    // Phase 2: resolve real filename from signed URL (background)
-    for (int i = 0; i < items.length; i++) {
-      if (!mounted) break;
-      try {
-        // ✅ Use course file signed URL endpoint, NOT /files/signed-url/:path
-        final signedUrlRes = await _courseApi.getCourseFileSignedUrl(
-          widget.classId,
-          i,
-          expiresIn: 3600,
-        );
-        final signedUrl = signedUrlRes.url;
-        if (signedUrl.isNotEmpty) {
-          final resolvedName =
-              _extractFilenameFromUrl(signedUrl) ?? items[i].originalName;
-          if (mounted) {
-            setState(() {
-              if (i < uploadedFiles.length) {
-                uploadedFiles[i] =
-                    uploadedFiles[i].copyWith(displayName: resolvedName);
-              }
-            });
-          }
-        }
-      } catch (_) {
-        // Keep UUID-based name as fallback — silent fail
-      }
-    }
-  }
-
-  /// Extract original filename from a presigned URL's
-  /// response-content-disposition query parameter.
-  String? _extractFilenameFromUrl(String signedUrl) {
-    try {
-      final uri = Uri.parse(signedUrl);
-      final String? disposition =
-          uri.queryParameters['response-content-disposition'] ??
-              uri.queryParameters['Content-Disposition'];
-
-      if (disposition != null) {
-        final decoded = Uri.decodeComponent(disposition);
-        final match = RegExp(
-          r"""filename\*?=(?:UTF-8''|"?)([^";]+)"?""",
-          caseSensitive: false,
-        ).firstMatch(decoded);
-        if (match != null && match.group(1) != null) {
-          return match.group(1)!.trim();
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
+  /// 根據文件名猜測 MIME 類型
   String _guessMimetype(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
     switch (ext) {
@@ -275,17 +273,30 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 
   String _formatDateTime(DateTime dt) {
-    return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
+  String _buildPublicFileUrl(String path) {
+    final encodedPath = Uri.encodeFull(path.trim());
+    return 'https://storage.googleapis.com/fyp-uploads/$encodedPath';
+  }
+
+  /// 上傳新文件
   Future<void> _uploadFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
-          'pdf', 'ppt', 'pptx', 'doc', 'docx',
-          'xls', 'xlsx', 'png', 'jpg', 'jpeg'
+          'pdf',
+          'ppt',
+          'pptx',
+          'doc',
+          'docx',
+          'xls',
+          'xlsx',
+          'png',
+          'jpg',
+          'jpeg'
         ],
         allowMultiple: true,
         withData: true,
@@ -319,13 +330,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
           setState(() {
             uploadedFiles.add(UploadedFileItem(
               originalName: response.file.originalName,
-              displayName: response.file.originalName,
               path: response.file.path,
               url: response.file.url,
               size: response.file.size.toInt(),
               mimetype: response.file.mimetype,
               isExisting: false,
-              // fileIndex is null for new files — they use response.file.url directly
             ));
           });
 
@@ -334,7 +343,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
               SnackBar(
                 content: Text('✅ ${file.name} uploaded successfully'),
                 backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
+                duration: Duration(seconds: 2),
               ),
             );
           }
@@ -342,7 +351,8 @@ class _EditClassScreenState extends State<EditClassScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('❌ Failed to upload ${file.name}: ${e.toString()}'),
+                content:
+                    Text('❌ Failed to upload ${file.name}: ${e.toString()}'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -357,25 +367,28 @@ class _EditClassScreenState extends State<EditClassScreen> {
     }
   }
 
+  /// 刪除文件
   void _removeFile(int index) {
     final file = uploadedFiles[index];
-    final fileName = file.displayName;
+    final fileName = file.originalName;
 
+    // Show confirmation for existing files
     if (file.isExisting) {
       showDialog(
         context: context,
         builder: (dialogContext) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
             width: 400,
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded,
+                Icon(Icons.warning_amber_rounded,
                     size: 48, color: Colors.orange),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Remove File',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
@@ -397,9 +410,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: AppColors.cardBorder),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        child: const Text('Cancel'),
+                        child: Text('Cancel'),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -414,9 +428,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        child: const Text('Remove',
+                        child: Text('Remove',
                             style: TextStyle(color: Colors.white)),
                       ),
                     ),
@@ -428,40 +443,23 @@ class _EditClassScreenState extends State<EditClassScreen> {
         ),
       );
     } else {
+      // New files can be removed immediately without confirmation
       setState(() => uploadedFiles.removeAt(index));
     }
   }
 
-  void _triggerDownload(String url, String filename) {
-    try {
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute('download', filename)
-        ..setAttribute('target', '_blank');
-      html.document.body?.children.add(anchor);
-      anchor.click();
-      anchor.remove();
-    } catch (_) {
-      html.window.open(url, '_blank');
-    }
-  }
-
-  /// Download/preview a file.
-  ///
-  /// - New files  → use the URL returned from the upload response directly.
-  /// - Existing files → fetch a fresh signed URL via
-  ///   GET /course/:id/files/:index/signed-url  (avoids expiry issues).
+  /// 預覽/下載文件
   Future<void> _previewFile(UploadedFileItem file) async {
-    final displayName = file.displayName;
-
-    // New uploaded file: URL is already available from the upload response
-    if (!file.isExisting && file.url != null && file.url!.isNotEmpty) {
-      _triggerDownload(file.url!, displayName);
+    // A) 優先使用 file.url（你已驗證這個可下載）
+    if (file.url != null && file.url!.trim().isNotEmpty) {
+      html.window.open(file.url!, '_blank');
       return;
     }
 
-    // Existing file: must have fileIndex to call the correct endpoint
-    if (file.isExisting && file.fileIndex == null) {
-      _showError('File index not available');
+    // B) 沒有 url，就用 path
+    final path = file.path.trim();
+    if (path.isEmpty) {
+      _showError('File path not available');
       return;
     }
 
@@ -470,7 +468,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
         SnackBar(
           content: Row(
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
@@ -479,37 +477,44 @@ class _EditClassScreenState extends State<EditClassScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text('Getting file link...'),
+              Text('Getting file link...'),
             ],
           ),
           backgroundColor: AppColors.primary,
-          duration: const Duration(seconds: 10),
+          duration: Duration(seconds: 10),
         ),
       );
     }
 
     try {
-      // ✅ Correct endpoint: /course/:id/files/:index/signed-url
-      final signedUrlRes = await _courseApi.getCourseFileSignedUrl(
-        widget.classId,
-        file.fileIndex!,
-        expiresIn: 3600,
-      );
+      // C) 先試 signed-url
+      final signedUrlRes = await _filesApi.getSignedUrl(path);
 
-      if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
 
       final url = signedUrlRes.url;
       if (url.isNotEmpty) {
-        _triggerDownload(url, displayName);
-      } else {
-        _showError('Could not get file download link');
+        html.window.open(url, '_blank');
+        return;
       }
+
+      // D) signed-url 空字串時 fallback 公開 URL
+      final fallback = _buildPublicFileUrl(path);
+      html.window.open(fallback, '_blank');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      _showError('Failed to get file link: ${e.toString()}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      // E) signed-url 失敗也 fallback 公開 URL
+      final fallback = _buildPublicFileUrl(path);
+      html.window.open(fallback, '_blank');
     }
   }
 
+  /// 格式化文件大小
   String _formatFileSize(int bytes) {
     if (bytes <= 0) return '';
     if (bytes < 1024) return '$bytes B';
@@ -517,6 +522,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  /// 根據文件類型返回圖標
   IconData _getFileIcon(String mimetype) {
     if (mimetype.contains('pdf')) return Icons.picture_as_pdf;
     if (mimetype.contains('word') || mimetype.contains('document')) {
@@ -532,6 +538,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return Icons.insert_drive_file;
   }
 
+  /// 獲取文件類型標籤
   String _getFileExtLabel(String mimetype) {
     if (mimetype.contains('pdf')) return 'PDF';
     if (mimetype.contains('word') || mimetype.contains('document')) return 'DOC';
@@ -547,6 +554,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return 'FILE';
   }
 
+  /// 獲取文件類型對應的顏色
   Color _getFileColor(String mimetype) {
     if (mimetype.contains('pdf')) return Colors.red;
     if (mimetype.contains('word') || mimetype.contains('document')) {
@@ -563,6 +571,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 
   Future<void> _saveClass() async {
+    // Validate required fields
     if (_classNameController.text.trim().isEmpty) {
       _showError('Please enter class name');
       return;
@@ -592,6 +601,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
         endDateTime!.millisecondsSinceEpoch,
       );
 
+      // 收集所有文件路徑（包括已有和新上傳的）
       final filePaths = uploadedFiles.map((f) => f.path).toList();
 
       final request = UpdateCourseReq(
@@ -611,7 +621,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Class updated successfully'),
             backgroundColor: Colors.green,
           ),
@@ -621,13 +631,18 @@ class _EditClassScreenState extends State<EditClassScreen> {
     } catch (e) {
       _showError('Failed to update class: ${e.toString()}');
     } finally {
-      if (mounted) setState(() => isSaving = false);
+      if (mounted) {
+        setState(() => isSaving = false);
+      }
     }
   }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -656,10 +671,9 @@ class _EditClassScreenState extends State<EditClassScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded,
-                  size: 48, color: Colors.orange),
+              Icon(Icons.warning_amber_rounded, size: 48, color: Colors.orange),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Delete Class',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
@@ -681,9 +695,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: AppColors.cardBorder),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -698,9 +713,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: const Text('Delete',
+                      child: Text('Delete',
                           style: TextStyle(color: Colors.white)),
                     ),
                   ),
@@ -715,11 +731,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
 
   Future<void> _deleteClass() async {
     setState(() => isSaving = true);
+
     try {
       await _courseApi.disableCourse(widget.classId);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Class deleted successfully'),
             backgroundColor: Colors.green,
           ),
@@ -729,7 +747,9 @@ class _EditClassScreenState extends State<EditClassScreen> {
     } catch (e) {
       _showError('Failed to delete class: ${e.toString()}');
     } finally {
-      if (mounted) setState(() => isSaving = false);
+      if (mounted) {
+        setState(() => isSaving = false);
+      }
     }
   }
 
@@ -739,7 +759,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
       return Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBarWidget(currentRoute: '/class/edit'),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -751,14 +771,14 @@ class _EditClassScreenState extends State<EditClassScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 16),
-              const Text('Error loading class data'),
+              Text('Error loading class data'),
               const SizedBox(height: 8),
               Text(errorMessage!,
                   style: TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 16),
-              ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+              ElevatedButton(onPressed: _loadData, child: Text('Retry')),
             ],
           ),
         ),
@@ -771,13 +791,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
       body: SingleChildScrollView(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: BoxConstraints(maxWidth: 800),
             child: Padding(
               padding: const EdgeInsets.all(40.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Center(
+                  Center(
                     child: Text(
                       'Edit Class',
                       style: TextStyle(
@@ -787,46 +807,56 @@ class _EditClassScreenState extends State<EditClassScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
+
+                  // Class Name
                   CustomTextField(
                     label: 'Class Name *',
                     placeholder: 'e.g., Mathematics Level 1',
                     controller: _classNameController,
                   ),
                   const SizedBox(height: 24),
-                  CustomTextField(
-                    label: 'Subject Code',
-                    placeholder: 'e.g., MATH',
-                    controller: _subjectCodeController,
-                    maxLength: 4,
-                  ),
+
+
+                  // Start Date and Time
+                  _buildDateTimeField(
+                      'Start Date and Time *', _startTimeController, (dt) {
+                    setState(() => startDateTime = dt);
+                  }),
                   const SizedBox(height: 24),
+
+                  // End Date and Time
+                  _buildDateTimeField(
+                      'End Date and Time *', _endTimeController, (dt) {
+                    setState(() => endDateTime = dt);
+                  }),
+                  const SizedBox(height: 24),
+
+                  // School Dropdown
+                  _buildSchoolDropdown(),
+                  const SizedBox(height: 24),
+
+                  // Room
                   CustomTextField(
                     label: 'Room',
                     placeholder: 'e.g., Room 301',
                     controller: _roomController,
                   ),
                   const SizedBox(height: 24),
-                  _buildDateTimeField(
-                      'Start Date and Time *', _startTimeController, (dt) {
-                    setState(() => startDateTime = dt);
-                  }),
-                  const SizedBox(height: 24),
-                  _buildDateTimeField(
-                      'End Date and Time *', _endTimeController, (dt) {
-                    setState(() => endDateTime = dt);
-                  }),
-                  const SizedBox(height: 24),
-                  _buildSchoolDropdown(),
-                  const SizedBox(height: 24),
+
+                  // Tutor Dropdown
                   _buildTutorDropdown(),
                   const SizedBox(height: 24),
+
+                  // Overview / Notification Content
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Overview / Notification Content',
                         style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w500),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -861,20 +891,25 @@ class _EditClassScreenState extends State<EditClassScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // Teaching Materials Section
                   _buildFilesSection(),
                   const SizedBox(height: 40),
+
+                  // Action Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Delete Button
                       SizedBox(
                         width: 120,
                         height: 48,
                         child: ElevatedButton.icon(
                           onPressed:
                               isSaving ? null : _showDeleteConfirmation,
-                          icon: const Icon(Icons.delete_outline,
+                          icon: Icon(Icons.delete_outline,
                               size: 18, color: Colors.white),
-                          label: const Text('Delete',
+                          label: Text('Delete',
                               style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -883,10 +918,12 @@ class _EditClassScreenState extends State<EditClassScreen> {
                             backgroundColor: Colors.red,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                         ),
                       ),
+                      // Cancel and Save Buttons
                       Row(
                         children: [
                           SizedBox(
@@ -900,11 +937,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
                                 backgroundColor: Colors.white,
                                 foregroundColor: AppColors.textPrimary,
                                 elevation: 0,
-                                side: BorderSide(color: AppColors.inputBorder),
+                                side:
+                                    BorderSide(color: AppColors.inputBorder),
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
-                              child: const Text('Cancel',
+                              child: Text('Cancel',
                                   style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600)),
@@ -921,10 +960,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               child: isSaving
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
@@ -934,7 +974,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
                                                 Colors.white),
                                       ),
                                     )
-                                  : const Text('Save',
+                                  : Text('Save',
                                       style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600)),
@@ -953,19 +993,18 @@ class _EditClassScreenState extends State<EditClassScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // Files Section
-  // ═══════════════════════════════════════════════════════════════════════
-
   Widget _buildFilesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Teaching Materials',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(width: 8),
             Tooltip(
@@ -977,11 +1016,15 @@ class _EditClassScreenState extends State<EditClassScreen> {
             if (uploadedFiles.isNotEmpty)
               Text(
                 '${uploadedFiles.length} file${uploadedFiles.length != 1 ? 's' : ''}',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
               ),
           ],
         ),
         const SizedBox(height: 8),
+
         Container(
           decoration: BoxDecoration(
             border: Border.all(
@@ -999,21 +1042,22 @@ class _EditClassScreenState extends State<EditClassScreen> {
                       ? _buildEmptyFilesState()
                       : _buildFilesList(),
         ),
+
         if (uploadedFiles.isNotEmpty && !isUploading && !isLoadingFiles) ...[
           const SizedBox(height: 12),
           Row(
             children: [
               ElevatedButton.icon(
                 onPressed: _uploadFiles,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add More Files'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Add More Files'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1030,10 +1074,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.warning_amber_rounded,
+                            Icon(Icons.warning_amber_rounded,
                                 size: 48, color: Colors.orange),
                             const SizedBox(height: 16),
-                            const Text(
+                            Text(
                               'Clear All Files',
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.w600),
@@ -1059,10 +1103,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
                                       side: BorderSide(
                                           color: AppColors.cardBorder),
                                       shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                      ),
                                     ),
-                                    child: const Text('Cancel'),
+                                    child: Text('Cancel'),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -1077,10 +1122,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red,
                                       shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                      ),
                                     ),
-                                    child: const Text('Clear',
+                                    child: Text('Clear',
                                         style:
                                             TextStyle(color: Colors.white)),
                                   ),
@@ -1093,15 +1139,15 @@ class _EditClassScreenState extends State<EditClassScreen> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.delete_sweep, size: 18),
-                label: const Text('Clear All'),
+                icon: Icon(Icons.delete_sweep, size: 18),
+                label: Text('Clear All'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: BorderSide(color: Colors.red.withOpacity(0.5)),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -1112,21 +1158,22 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 
   Widget _buildFilesLoading() {
-    return SizedBox(
+    return Container(
       height: 120,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(height: 12),
-            Text('Loading files...',
-                style:
-                    TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+            Text(
+              'Loading files...',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
           ],
         ),
       ),
@@ -1134,16 +1181,18 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 
   Widget _buildUploadingState() {
-    return SizedBox(
+    return Container(
       height: 120,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
+            CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text('Uploading files...',
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text(
+              'Uploading files...',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ],
         ),
       ),
@@ -1151,18 +1200,24 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 
   Widget _buildEmptyFilesState() {
-    return SizedBox(
+    return Container(
       height: 200,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_upload_outlined,
-                size: 48, color: AppColors.textSecondary),
+            Icon(
+              Icons.cloud_upload_outlined,
+              size: 48,
+              color: AppColors.textSecondary,
+            ),
             const SizedBox(height: 16),
             Text(
               'No teaching materials uploaded yet',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1175,15 +1230,15 @@ class _EditClassScreenState extends State<EditClassScreen> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _uploadFiles,
-              icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Browse Files'),
+              icon: Icon(Icons.folder_open, size: 18),
+              label: Text('Browse Files'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -1195,8 +1250,8 @@ class _EditClassScreenState extends State<EditClassScreen> {
   Widget _buildFilesList() {
     return ListView.separated(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(12),
+      physics: NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.all(12),
       itemCount: uploadedFiles.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
@@ -1204,7 +1259,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
         final fileColor = _getFileColor(file.mimetype);
 
         return Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
@@ -1219,10 +1274,14 @@ class _EditClassScreenState extends State<EditClassScreen> {
                   color: fileColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(_getFileIcon(file.mimetype),
-                    color: fileColor, size: 24),
+                child: Icon(
+                  _getFileIcon(file.mimetype),
+                  color: fileColor,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1231,16 +1290,18 @@ class _EditClassScreenState extends State<EditClassScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            file.displayName,
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w500),
+                            file.originalName,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (file.isExisting)
                           Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(
+                            margin: EdgeInsets.only(left: 8),
+                            padding: EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withOpacity(0.1),
@@ -1257,19 +1318,20 @@ class _EditClassScreenState extends State<EditClassScreen> {
                           )
                         else
                           Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(
+                            margin: EdgeInsets.only(left: 8),
+                            padding: EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text(
+                            child: Text(
                               'New',
                               style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w500),
+                                fontSize: 10,
+                                color: Colors.green,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                       ],
@@ -1279,7 +1341,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
                       children: [
                         if (file.isExisting) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
                               color: fileColor.withOpacity(0.1),
@@ -1300,26 +1362,27 @@ class _EditClassScreenState extends State<EditClassScreen> {
                           Text(
                             _formatFileSize(file.size),
                             style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary),
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                       ],
                     ),
                   ],
                 ),
               ),
+
               IconButton(
                 icon: Icon(
-                  file.isExisting ? Icons.download : Icons.open_in_new,
+                  file.url != null ? Icons.open_in_new : Icons.download,
                   color: AppColors.primary,
                   size: 20,
                 ),
                 onPressed: () => _previewFile(file),
-                tooltip: file.isExisting ? 'Download file' : 'Open file',
+                tooltip: file.url != null ? 'Open file' : 'Download file',
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.red, size: 20),
+                icon: Icon(Icons.delete_outline, color: Colors.red, size: 20),
                 onPressed: () => _removeFile(index),
                 tooltip: 'Remove',
               ),
@@ -1335,16 +1398,20 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           decoration: InputDecoration(
             hintText: 'YYYY/MM/DD HH:MM',
-            hintStyle: TextStyle(
-                color: AppColors.textSecondary.withOpacity(0.5)),
+            hintStyle:
+                TextStyle(color: AppColors.textSecondary.withOpacity(0.5)),
             suffixIcon:
                 Icon(Icons.calendar_today, color: AppColors.textSecondary),
             filled: true,
@@ -1363,7 +1430,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
             ),
           ),
           onTap: () async {
-            DateTime initialDate = DateTime.now();
+            final now = DateTime.now();
+
+            // 編輯頁允許載入和選擇歷史日期
+            DateTime initialDate = now;
             if (label.contains('Start') && startDateTime != null) {
               initialDate = startDateTime!;
             } else if (label.contains('End') && endDateTime != null) {
@@ -1373,29 +1443,47 @@ class _EditClassScreenState extends State<EditClassScreen> {
             DateTime? date = await showDatePicker(
               context: context,
               initialDate: initialDate,
-              firstDate: DateTime(2020),
-              lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
             );
-            if (date != null && mounted) {
+            if (date != null) {
               TimeOfDay initialTime = TimeOfDay.now();
               if (label.contains('Start') && startDateTime != null) {
                 initialTime = TimeOfDay(
-                    hour: startDateTime!.hour,
-                    minute: startDateTime!.minute);
+                    hour: startDateTime!.hour, minute: startDateTime!.minute);
               } else if (label.contains('End') && endDateTime != null) {
                 initialTime = TimeOfDay(
-                    hour: endDateTime!.hour,
-                    minute: endDateTime!.minute);
+                    hour: endDateTime!.hour, minute: endDateTime!.minute);
               }
 
               TimeOfDay? time = await showTimePicker(
                 context: context,
                 initialTime: initialTime,
               );
+
               if (time != null) {
                 final dateTime = DateTime(
-                  date.year, date.month, date.day, time.hour, time.minute,
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
                 );
+
+                if (label.contains('Start')) {
+                  if (endDateTime != null && dateTime.isAfter(endDateTime!)) {
+                    _showError('Start time must be earlier than end time');
+                    return;
+                  }
+                }
+
+                if (label.contains('End')) {
+                  if (startDateTime != null && dateTime.isBefore(startDateTime!)) {
+                    _showError('End time must be later than start time');
+                    return;
+                  }
+                }
+
                 controller.text = _formatDateTime(dateTime);
                 onSelected(dateTime);
               }
@@ -1411,8 +1499,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('School *',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+        Text(
+          'School *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1446,7 +1539,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
                     ],
                   ),
                 ),
-                const DropdownMenuItem<String>(
+                DropdownMenuItem<String>(
                   enabled: false,
                   child: Divider(height: 1),
                 ),
@@ -1473,8 +1566,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Tutor *',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+        Text(
+          'Tutor *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1496,7 +1594,9 @@ class _EditClassScreenState extends State<EditClassScreen> {
                         child: Text(tutor.name),
                       ))
                   .toList(),
-              onChanged: (value) => setState(() => selectedTutorId = value),
+              onChanged: (value) {
+                setState(() => selectedTutorId = value);
+              },
             ),
           ),
         ),
@@ -1516,10 +1616,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // Create School Dialog
-// ═══════════════════════════════════════════════════════════════════════════
-
 class CreateSchoolDialog extends StatefulWidget {
   final Function(SchoolRes) onSchoolCreated;
 
@@ -1595,18 +1692,19 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Create New School',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close),
                   onPressed:
                       isSaving ? null : () => Navigator.of(context).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 24),
+
             if (errorMessage != null) ...[
               Container(
                 width: double.infinity,
@@ -1618,22 +1716,23 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline,
-                        color: Colors.red, size: 20),
+                    Icon(Icons.error_outline, color: Colors.red, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(errorMessage!,
-                          style: const TextStyle(
-                              color: Colors.red, fontSize: 14)),
+                      child: Text(
+                        errorMessage!,
+                        style: TextStyle(color: Colors.red, fontSize: 14),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
-            const Text('School Name *',
-                style:
-                    TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+
+            Text('School Name *',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
@@ -1650,17 +1749,18 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('GPS Location (Optional)',
-                style:
-                    TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+
+            Text('GPS Location (Optional)',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _latController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: 'Latitude',
                       filled: true,
@@ -1679,8 +1779,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _longController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: 'Longitude',
                       filled: true,
@@ -1698,6 +1798,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ],
             ),
             const SizedBox(height: 32),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -1705,10 +1806,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                   width: 100,
                   height: 48,
                   child: TextButton(
-                    onPressed: isSaving
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
+                    onPressed:
+                        isSaving ? null : () => Navigator.of(context).pop(),
+                    child: Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1723,13 +1823,13 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                           borderRadius: BorderRadius.circular(8)),
                     ),
                     child: isSaving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Create School',
+                        : Text('Create School',
                             style: TextStyle(color: Colors.white)),
                   ),
                 ),

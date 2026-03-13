@@ -549,14 +549,6 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Room
-                  CustomTextField(
-                    label: 'Room',
-                    placeholder: 'e.g., Room 301',
-                    controller: _roomController,
-                  ),
-                  const SizedBox(height: 24),
-
                   // Start Date and Time
                   _buildDateTimeField(
                       'Start Date and Time *', _startTimeController, (dt) {
@@ -573,6 +565,14 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
                   // School Dropdown
                   _buildSchoolDropdown(),
+                  const SizedBox(height: 24),
+
+                  // Room
+                  CustomTextField(
+                    label: 'Room',
+                    placeholder: 'e.g., Room 301',
+                    controller: _roomController,
+                  ),
                   const SizedBox(height: 24),
 
                   // Tutor Dropdown
@@ -1374,6 +1374,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ),
           ),
           onTap: () async {
+            final now = DateTime.now();
             DateTime? date = await showDatePicker(
               context: context,
               initialDate: DateTime.now(),
@@ -1393,6 +1394,25 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   time.hour,
                   time.minute,
                 );
+
+                // Validate: start time must be later than current time
+                if (label.contains('Start') && dateTime.isBefore(now)) {
+                  _showError('Start time must be later than current time');
+                  return;
+                }
+
+                // Validate: end time must be later than start time and current time
+                if (label.contains('End')) {
+                  if (dateTime.isBefore(now)) {
+                    _showError('End time must be later than current time');
+                    return;
+                  }
+                  if (startDateTime != null && dateTime.isBefore(startDateTime!)) {
+                    _showError('End time must be later than start time');
+                    return;
+                  }
+                }
+
                 controller.text =
                     '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
                 onSelected(dateTime);
@@ -1532,6 +1552,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Map Picker Dialog with Location Search & Reverse Geocoding
+// (Full replacement)
 // ═══════════════════════════════════════════════════════════════════════════
 class MapPickerDialog extends StatefulWidget {
   final double? initialLat;
@@ -1553,10 +1574,11 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   GoogleMapController? _mapController;
   bool _isLoadingLocation = true;
   String? _locationError;
-  String? _selectedAddress;
+  String? _selectedAddress; // 完整地址
+  String? _selectedStreet;  // 街道名稱（若可取得）
   Set<Marker> _markers = {};
 
-  static const LatLng _defaultLocation = LatLng(22.3193, 114.1694);
+  static const LatLng _defaultLocation = LatLng(22.3193, 114.1694); // HK
 
   // ── Search state ───────────────────────────────────────────────────────
   final TextEditingController _searchController = TextEditingController();
@@ -1567,7 +1589,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   Timer? _debounceTimer;
   bool _isReverseGeocoding = false;
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -1610,9 +1631,11 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
           return;
         }
       }
+
       if (permission == LocationPermission.deniedForever) {
         _fallbackLocation(
-            'Location permission permanently denied. Please enable in settings.');
+          'Location permission permanently denied. Please enable in settings.',
+        );
         return;
       }
 
@@ -1637,7 +1660,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     } catch (e) {
       if (!mounted) return;
       _fallbackLocation(
-          'Could not get location: ${e.toString().split(':').last.trim()}');
+        'Could not get location: ${e.toString().split(':').last.trim()}',
+      );
     }
   }
 
@@ -1648,6 +1672,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       _selectedLocation = _defaultLocation;
       _isLoadingLocation = false;
     });
+    _updateMarker(_defaultLocation);
+    _reverseGeocode(_defaultLocation);
   }
 
   LatLng get _mapCenter => _selectedLocation ?? _defaultLocation;
@@ -1655,11 +1681,13 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   void _updateMarker(LatLng pos) {
     _markers
       ..clear()
-      ..add(Marker(
-        markerId: const MarkerId('selected'),
-        position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ));
+      ..add(
+        Marker(
+          markerId: const MarkerId('selected'),
+          position: pos,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
   }
 
   // ── Search ─────────────────────────────────────────────────────────────
@@ -1677,19 +1705,29 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
 
     setState(() => _isSearching = true);
 
-    _debounceTimer = Timer(const Duration(milliseconds: 600), () {
-      _performSearch(query);
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query.trim());
     });
   }
 
   Future<void> _performSearch(String query) async {
     if (!mounted) return;
 
+    // 避免太短查詢造成雜訊
+    if (query.length < 2) {
+      setState(() {
+        _searchResults = [];
+        _showSearchResults = false;
+        _isSearching = false;
+      });
+      return;
+    }
+
     final results = await _placesService.searchPlaces(
       query,
       nearLat: _selectedLocation?.latitude ?? _defaultLocation.latitude,
       nearLng: _selectedLocation?.longitude ?? _defaultLocation.longitude,
-      countryCode: 'hk',
+      countryCode: 'hk', // 若需全球可改為 null
     );
 
     if (!mounted) return;
@@ -1700,7 +1738,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       _isSearching = false;
     });
 
-    if (results.isEmpty && query.trim().isNotEmpty) {
+    if (results.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No results found for "$query"'),
@@ -1711,19 +1749,33 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     }
   }
 
+  String _streetFromResult(PlaceSearchResult result) {
+    // 兼容：若 model 有 streetName 欄位就用它；沒有就從 displayName 推估
+    try {
+      final dynamic r = result;
+      final String? street = (r.streetName as String?);
+      if (street != null && street.trim().isNotEmpty) return street.trim();
+    } catch (_) {}
+    return _extractStreetFromAddress(result.displayName);
+  }
+
   Future<void> _selectSearchResult(PlaceSearchResult result) async {
-    final loc = LatLng(result.lat, result.lng);
+    final details = await _placesService.getPlaceDetails(result.placeId);
+    if (details == null || details.lat == null || details.lng == null) return;
+
+    final loc = LatLng(details.lat!, details.lng!);
 
     setState(() {
       _selectedLocation = loc;
-      _selectedAddress = result.shortName;
-      _searchController.text = result.shortName;
+      _selectedAddress = details.displayName;
+      _selectedStreet = details.streetName ?? details.shortName;
+      _searchController.text = details.shortName;
       _showSearchResults = false;
       _searchResults = [];
     });
-    _updateMarker(loc);
 
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 16));
+    _updateMarker(loc);
+    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
   }
 
   // ── Reverse geocoding ──────────────────────────────────────────────────
@@ -1737,10 +1789,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
 
     if (!mounted) return;
 
-    if (address != null) {
-      final parts = address.split(', ');
+    if (address != null && address.trim().isNotEmpty) {
       setState(() {
-        _selectedAddress = parts.take(3).join(', ');
+        _selectedAddress = address.trim();
+        _selectedStreet = _extractStreetFromAddress(address);
         _isReverseGeocoding = false;
       });
     } else {
@@ -1748,18 +1800,25 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     }
   }
 
+  String _extractStreetFromAddress(String address) {
+    // 簡單策略：取逗號前第一段，通常是門牌+街道
+    final parts = address.split(',').map((e) => e.trim()).toList();
+    if (parts.isEmpty) return '';
+    return parts.first;
+  }
+
   // ── Map tap ────────────────────────────────────────────────────────────
   void _onMapTap(LatLng latLng) {
     setState(() {
       _selectedLocation = latLng;
       _selectedAddress = null;
+      _selectedStreet = null;
       _showSearchResults = false;
     });
     _updateMarker(latLng);
     _reverseGeocode(latLng);
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1771,24 +1830,27 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ───────────────────────────────────────────────
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Select Location',
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                Text(
+                  'Select Location',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
                 IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop()),
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ],
             ),
             const SizedBox(height: 4),
-            Text('Search for a place or click on the map',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+            Text(
+              'Search by street/place and confirm exact coordinates',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
             const SizedBox(height: 12),
 
-            // ── Location error ───────────────────────────────────────
             if (_locationError != null && !_isLoadingLocation) ...[
               Container(
                 padding:
@@ -1804,9 +1866,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                         color: Colors.orange, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_locationError!,
-                          style: TextStyle(
-                              color: Colors.orange[800], fontSize: 12)),
+                      child: Text(
+                        _locationError!,
+                        style: TextStyle(color: Colors.orange[800], fontSize: 12),
+                      ),
                     ),
                     TextButton(
                       onPressed: _getCurrentLocation,
@@ -1818,14 +1881,12 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               const SizedBox(height: 8),
             ],
 
-            // ── Search + Map area (Stack so results overlay map) ─────
             Expanded(
               child: _isLoadingLocation
                   ? _buildLoadingView()
                   : Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        // Map + search field in a column
                         Column(
                           children: [
                             _buildSearchField(),
@@ -1833,7 +1894,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                             Expanded(child: _buildMap()),
                           ],
                         ),
-                        // Search results overlay
                         if (_showSearchResults && _searchResults.isNotEmpty)
                           Positioned(
                             top: 52,
@@ -1846,7 +1906,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             ),
             const SizedBox(height: 12),
 
-            // ── Selected location info ───────────────────────────────
             if (_selectedLocation != null && !_isLoadingLocation)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1857,33 +1916,50 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.location_on,
-                        color: AppColors.primary, size: 20),
+                    Icon(Icons.location_on, color: AppColors.primary, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (_selectedStreet != null &&
+                              _selectedStreet!.trim().isNotEmpty)
+                            Text(
+                              _selectedStreet!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           if (_selectedAddress != null)
                             Text(
                               _selectedAddress!,
                               style: TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w500),
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           if (_isReverseGeocoding)
-                            Text('Looking up address...',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                    fontStyle: FontStyle.italic)),
+                            Text(
+                              'Looking up address...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           const SizedBox(height: 2),
                           Text(
                             'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, '
                             'Lng: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
                             style: TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary),
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -1893,7 +1969,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               ),
             const SizedBox(height: 12),
 
-            // ── Action buttons ───────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1903,12 +1978,11 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : Icon(Icons.my_location, size: 18),
-                  label:
-                      Text(_isLoadingLocation ? 'Locating...' : 'My Location'),
-                  style:
-                      TextButton.styleFrom(foregroundColor: AppColors.primary),
+                  label: Text(_isLoadingLocation ? 'Locating...' : 'My Location'),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.primary),
                 ),
                 Row(
                   children: [
@@ -1920,7 +1994,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: AppColors.cardBorder),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: Text('Cancel'),
                       ),
@@ -1930,23 +2005,26 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       width: 140,
                       height: 44,
                       child: ElevatedButton(
-                        onPressed:
-                            _selectedLocation != null && !_isLoadingLocation
-                                ? () {
-                                    Navigator.of(context).pop({
-                                      'lat': _selectedLocation!.latitude,
-                                      'lng': _selectedLocation!.longitude,
-                                      'address': _selectedAddress,
-                                    });
-                                  }
-                                : null,
+                        onPressed: _selectedLocation != null && !_isLoadingLocation
+                            ? () {
+                                Navigator.of(context).pop({
+                                  'lat': _selectedLocation!.latitude,
+                                  'lng': _selectedLocation!.longitude,
+                                  'address': _selectedAddress, // 完整地址
+                                  'street': _selectedStreet,   // 街道名稱
+                                });
+                              }
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        child: Text('Confirm',
-                            style: TextStyle(color: Colors.white)),
+                        child: Text(
+                          'Confirm',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                   ],
@@ -1959,8 +2037,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     );
   }
 
-  // ── Sub-widgets ────────────────────────────────────────────────────────
-
   Widget _buildLoadingView() {
     return Center(
       child: Column(
@@ -1968,11 +2044,15 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         children: [
           CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text('Getting your location...',
-              style: TextStyle(color: AppColors.textSecondary)),
+          Text(
+            'Getting your location...',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
           const SizedBox(height: 8),
-          Text('Please allow location access when prompted',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(
+            'Please allow location access when prompted',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
           const SizedBox(height: 24),
           TextButton(
             onPressed: () {
@@ -1981,6 +2061,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                 _isLoadingLocation = false;
                 _locationError = 'Skipped location detection';
               });
+              _updateMarker(_defaultLocation);
+              _reverseGeocode(_defaultLocation);
             },
             child: Text('Skip and use default location'),
           ),
@@ -2006,16 +2088,17 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search by name, address, or place…',
+          hintText: 'Search by name, address, or street…',
           hintStyle: TextStyle(fontSize: 14),
           prefixIcon: Icon(Icons.search, color: AppColors.primary),
           suffixIcon: _isSearching
               ? Padding(
                   padding: const EdgeInsets.all(12),
                   child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 )
               : _searchController.text.isNotEmpty
                   ? IconButton(
@@ -2046,7 +2129,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       elevation: 4,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        constraints: const BoxConstraints(maxHeight: 260),
+        constraints: const BoxConstraints(maxHeight: 280),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -2060,6 +2143,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               Divider(height: 1, color: Colors.grey.shade200),
           itemBuilder: (context, index) {
             final r = _searchResults[index];
+            final street = _streetFromResult(r);
+
             return InkWell(
               onTap: () => _selectSearchResult(r),
               child: Padding(
@@ -2076,7 +2161,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            r.shortName,
+                            street.isNotEmpty ? street : r.shortName,
                             style: TextStyle(
                                 fontSize: 14, fontWeight: FontWeight.w500),
                             maxLines: 1,
@@ -2090,6 +2175,12 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${r.lat?.toStringAsFixed(6) ?? '--'}, ${r.lng?.toStringAsFixed(6) ?? '--'}',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.textSecondary),
+                          ),
                         ],
                       ),
                     ),
@@ -2102,9 +2193,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           color: AppColors.primary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(r.type,
-                            style: TextStyle(
-                                fontSize: 11, color: AppColors.primary)),
+                        child: Text(
+                          r.type,
+                          style: TextStyle(fontSize: 11, color: AppColors.primary),
+                        ),
                       ),
                     ],
                   ],
@@ -2135,6 +2227,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Create School Dialog with Map Picker
+// (Full replacement)
 // ═══════════════════════════════════════════════════════════════════════════
 class CreateSchoolDialog extends StatefulWidget {
   final Function(SchoolRes) onSchoolCreated;
@@ -2153,7 +2246,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
 
   double? selectedLat;
   double? selectedLng;
-  String? selectedAddress;
+  String? selectedAddress; // 完整地址
+  String? selectedStreet;  // 街道名（可選）
 
   bool isSaving = false;
   String? errorMessage;
@@ -2172,12 +2266,18 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
         selectedLat = result['lat'] as double?;
         selectedLng = result['lng'] as double?;
         selectedAddress = result['address'] as String?;
+        selectedStreet = result['street'] as String?;
 
-        if (selectedAddress != null && selectedAddress!.isNotEmpty) {
+        // 輸入框優先顯示街道，其次完整地址，最後顯示座標
+        if (selectedStreet != null && selectedStreet!.trim().isNotEmpty) {
+          _locationController.text = selectedStreet!;
+        } else if (selectedAddress != null && selectedAddress!.trim().isNotEmpty) {
           _locationController.text = selectedAddress!;
-        } else {
+        } else if (selectedLat != null && selectedLng != null) {
           _locationController.text =
               'Lat: ${selectedLat!.toStringAsFixed(6)}, Lng: ${selectedLng!.toStringAsFixed(6)}';
+        } else {
+          _locationController.clear();
         }
       });
     }
@@ -2241,13 +2341,13 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Create New School',
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                Text(
+                  'Create New School',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
                 IconButton(
                   icon: Icon(Icons.close),
-                  onPressed:
-                      isSaving ? null : () => Navigator.of(context).pop(),
+                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -2268,9 +2368,11 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                     Icon(Icons.error_outline, color: Colors.red, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: Text(errorMessage!,
-                            style:
-                                TextStyle(color: Colors.red, fontSize: 14))),
+                      child: Text(
+                        errorMessage!,
+                        style: TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2278,11 +2380,14 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             ],
 
             // School Name
-            Text('School Name *',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary)),
+            Text(
+              'School Name *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
@@ -2291,25 +2396,30 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 filled: true,
                 fillColor: AppColors.inputBackground,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.inputBorder)),
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.inputBorder),
+                ),
                 enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.inputBorder)),
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.inputBorder),
+                ),
                 focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide:
-                        BorderSide(color: AppColors.primary, width: 2)),
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                ),
               ),
             ),
             const SizedBox(height: 24),
 
             // GPS Location
-            Text('GPS Location *',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary)),
+            Text(
+              'GPS Location *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -2321,20 +2431,20 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                       hintText: 'Search & select location on map',
                       filled: true,
                       fillColor: AppColors.inputBackground,
-                      prefixIcon: Icon(Icons.location_on,
-                          color: AppColors.textSecondary),
+                      prefixIcon:
+                          Icon(Icons.location_on, color: AppColors.textSecondary),
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              BorderSide(color: AppColors.inputBorder)),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
                       enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              BorderSide(color: AppColors.inputBorder)),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.inputBorder),
+                      ),
                       focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              BorderSide(color: AppColors.primary, width: 2)),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
                     ),
                     onTap: _openMapPicker,
                   ),
@@ -2349,7 +2459,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       padding: EdgeInsets.symmetric(horizontal: 16),
                     ),
                   ),
@@ -2357,15 +2468,26 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ],
             ),
 
-            // Show coordinates under the location field
-            if (selectedLat != null && selectedLng != null) ...[
+            if (selectedAddress != null && selectedAddress!.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(
+                  selectedAddress!,
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+
+            if (selectedLat != null && selectedLng != null) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
                   'GPS: ${selectedLat!.toStringAsFixed(6)}, ${selectedLng!.toStringAsFixed(6)}',
-                  style:
-                      TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ),
             ],
@@ -2379,8 +2501,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                   width: 100,
                   height: 44,
                   child: TextButton(
-                    onPressed:
-                        isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('Cancel'),
                   ),
                 ),
@@ -2393,7 +2514,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: isSaving
                         ? SizedBox(
