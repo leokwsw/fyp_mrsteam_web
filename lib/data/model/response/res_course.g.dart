@@ -23,9 +23,15 @@ CourseRes _$CourseResFromJson(Map<String, dynamic> json) => CourseRes(
       .map((e) => CourseTimestampRes.fromJson(e as Map<String, dynamic>))
       .toList(),
   id: json['_id'] as String?,
-  courseCode: CourseRes._readCourseCode(json, 'courseCode') as String?,
+  courseCode: CourseRes._readCourseCode(json, 'courseCode') == null
+      ? ''
+      : CourseRes._toSafeString(CourseRes._readCourseCode(json, 'courseCode')),
   subjectShortName:
-      CourseRes._readSubjectShortName(json, 'subjectShortName') as String?,
+      CourseRes._readSubjectShortName(json, 'subjectShortName') == null
+      ? ''
+      : CourseRes._toSafeString(
+          CourseRes._readSubjectShortName(json, 'subjectShortName'),
+        ),
   isDeleted: json['isDeleted'] as bool?,
   createdAt: json['createdAt'] as String?,
   updatedAt: json['updatedAt'] as String?,

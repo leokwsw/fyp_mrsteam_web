@@ -62,11 +62,16 @@ class CourseRes {
   final String tutorId;
   final List<CourseTimestampRes> timestamps;
 
-  @JsonKey(readValue: _readCourseCode)
-  final String? courseCode;
+  @JsonKey(readValue: _readCourseCode, fromJson: _toSafeString)
+  final String courseCode;
 
-  @JsonKey(readValue: _readSubjectShortName)
-  final String? subjectShortName;
+  @JsonKey(readValue: _readSubjectShortName, fromJson: _toSafeString)
+  final String subjectShortName;
+
+  static String _toSafeString(dynamic v) {
+    if (v == null) return '';
+    return v.toString();
+  }
 
   final bool? isDeleted;
   final String? createdAt;
@@ -84,11 +89,11 @@ class CourseRes {
   }
 
   String get subjectCode {
-    if (courseCode != null && courseCode!.isNotEmpty) {
-      final match = RegExp(r'^[A-Za-z]+').firstMatch(courseCode!);
+    if (courseCode.isNotEmpty) {
+      final match = RegExp(r'^[A-Za-z]+').firstMatch(courseCode);
       if (match != null) return match.group(0)!;
     }
-    return subjectShortName ?? '';
+    return subjectShortName;
   }
 
   CourseRes(
@@ -100,8 +105,8 @@ class CourseRes {
     this.tutorId,
     this.timestamps, {
     this.id,
-    this.courseCode,
-    this.subjectShortName,
+    this.courseCode = '',
+    this.subjectShortName = '',
     this.isDeleted,
     this.createdAt,
     this.updatedAt,

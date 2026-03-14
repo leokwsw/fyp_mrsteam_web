@@ -199,26 +199,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   String _getStatusFromAttendance(AttendanceRes attendance) {
-    if (!attendance.checked) {
-      return 'Absent';
+  if (!attendance.checked) return 'Absent';
+
+  final checkIn = _isoToLocal(attendance.checkInTime);
+  if (checkIn == null) return 'Present';
+
+  try {
+    final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
+
+    // 迟到阈值 5 分钟
+    if (checkIn.isAfter(scheduledStart.add(const Duration(minutes: 5)))) {
+      return 'Late';
     }
-    
-    if (attendance.checkInTime != null) {
-      try {
-        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
-        final checkIn = DateTime.parse(attendance.checkInTime!);
-        
-        // If checked in more than 5 minutes late
-        if (checkIn.isAfter(scheduledStart.add(Duration(minutes: 5)))) {
-          return 'Late';
-        }
-      } catch (e) {
-        // If parsing fails, just check if checked
-      }
-    }
-    
-    return 'Present';
-  }
+  } catch (_) {}
+
+  return 'Present';
+}
 
   StatusType _getStatusType(String status) {
     switch (status) {
@@ -234,31 +230,50 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   String _formatTimestamp(CourseTimestampRes timestamp) {
-    try {
-      final start = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
-      final end = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
-      final dateFormat = DateFormat('yyyy-MM-dd');
-      final timeFormat = DateFormat('HH:mm');
-      
-      return '${dateFormat.format(start)}\n${timeFormat.format(start)} - ${timeFormat.format(end)}';
-    } catch (e) {
-      return '-';
-    }
+  try {
+    final start = _epochMsToLocal(timestamp.start);
+    final end = _epochMsToLocal(timestamp.end);
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    final timeFormat = DateFormat('HH:mm');
+
+    return '${dateFormat.format(start)}\n${timeFormat.format(start)} - ${timeFormat.format(end)}';
+  } catch (e) {
+    return '-';
+  }
+}
+
+  DateTime _epochMsToLocal(num ms) {
+    return DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true).toLocal();
   }
 
-  String _formatCheckInTime(String? checkInTime) {
-    if (checkInTime == null) return '-';
-    
-    try {
-      final dateTime = DateTime.parse(checkInTime);
-      final dateFormat = DateFormat('yyyy-MM-dd');
-      final timeFormat = DateFormat('HH:mm');
-      
-      return '${dateFormat.format(dateTime)}\n${timeFormat.format(dateTime)}';
-    } catch (e) {
-      return checkInTime;
-    }
+  DateTime? _isoToLocal(String? iso) {  
+  if (iso == null || iso.isEmpty) return null;
+  try {
+    return DateTime.parse(iso).toLocal();
+  } catch (_) {
+    return null;
   }
+}  
+
+  String _formatCheckInTime(String? checkInTime) {
+    final dt = _isoToLocal(checkInTime);
+    if (dt == null) return '-';
+
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    final timeFormat = DateFormat('HH:mm');
+    return '${dateFormat.format(dt)}\n${timeFormat.format(dt)}';
+  }
+
+  String _formatClassDisplayName(CourseRes? course, String fallbackId) {
+  if (course == null) return fallbackId;
+
+  final code = (course.courseCode ?? '').trim();
+  final name = course.name.trim();
+
+  if (code.isEmpty) return name.isNotEmpty ? name : fallbackId;
+  if (name.isEmpty) return code;
+  return '$code $name';
+}
 
   @override
   Widget build(BuildContext context) {
@@ -585,7 +600,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final filteredAttendances = attendances.where((attendance) {
       // Exclude future classes - only show if scheduled time has passed
       try {
-        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
+        final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
         if (scheduledStart.isAfter(now)) {
           return false; // Skip future classes
         }
@@ -607,10 +622,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         
         final tutorName = tutor?.name.toLowerCase() ?? '';
         final courseName = course?.name.toLowerCase() ?? '';
+        final courseCode = (course?.courseCode ?? '').toLowerCase();
         final schoolName = school?.name.toLowerCase() ?? '';
         
         if (!tutorName.contains(searchQuery) &&
             !courseName.contains(searchQuery) &&
+            !courseCode.contains(searchQuery) &&
             !schoolName.contains(searchQuery)) {
           return false;
         }
@@ -702,7 +719,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              course?.name ?? attendance.courseId,
+              _formatClassDisplayName(course, attendance.courseId),
               style: _cellStyle().copyWith(color: AppColors.textSecondary),
             ),
           ),

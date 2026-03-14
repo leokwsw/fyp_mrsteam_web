@@ -344,7 +344,6 @@ class _ClassListScreenState extends State<ClassListScreen> {
       final code = (course.courseCode ?? '').trim();
       final className = course.name.trim();
       final displayName = code.isNotEmpty ? '$code $className' : className;
-      debugPrint('displayName => $displayName');
 
       // Process each timestamp
       for (var timestamp in course.timestamps) {
