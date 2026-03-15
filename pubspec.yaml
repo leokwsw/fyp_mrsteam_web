@@ -167,6 +167,8 @@ dependencies:
   # File picker package for uploading files
   # https://pub.dev/packages/file_picker
 
+  excel: ^4.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
