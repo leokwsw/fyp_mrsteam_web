@@ -193,7 +193,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
             color: status == 'Canceled' ? Colors.red : Colors.blue,
             tutor: tutor?.name ?? 'Unknown Tutor',
             status: status,
-            location: course.room,
+            room: course.room,
             notes: course.overview,
           );
 
@@ -268,7 +268,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               const SizedBox(height: 16),
               _buildDetailRow('Tutor', event.tutor),
               const SizedBox(height: 16),
-              _buildDetailRow('Location', event.location),
+              _buildDetailRow('Room', event.room),
               const SizedBox(height: 16),
               _buildStatusRow('Status', event.status),
               const SizedBox(height: 16),
@@ -1022,7 +1022,7 @@ class CalendarClass {
   final Color color;
   final String tutor;
   final String status;
-  final String location;
+  final String room;
   final String notes;
 
   CalendarClass({
@@ -1033,7 +1033,7 @@ class CalendarClass {
     required this.color,
     required this.tutor,
     required this.status,
-    required this.location,
+    required this.room,
     required this.notes,
   });
 }

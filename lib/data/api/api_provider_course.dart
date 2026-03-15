@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart'; // debugPrint
 import 'package:fyp_mrsteam_web/data/api/api_provider_base.dart';
 import 'package:fyp_mrsteam_web/data/api/mrsteam_apis.dart';
 import 'package:fyp_mrsteam_web/data/model/request/req_course.dart';
@@ -28,10 +29,15 @@ class ApiProviderCourse extends ApiProviderBase {
       if (tutorId != null) 'tutorId': tutorId,
       if (schoolId != null) 'schoolId': schoolId,
     };
+
     return await ApiProviderBase.get<Map<String, dynamic>>(
       MrSteamAPIs.course,
       query: query,
-    ).then((response) => CourseListRes.fromJson(response.data ?? {}));
+    ).then((response) {
+      debugPrint('=== getCourses RAW response ===');
+      debugPrint(response.data.toString());
+      return CourseListRes.fromJson(response.data ?? {});
+    });
   }
 
   Future<CourseRes> getCourseById(String id) async {

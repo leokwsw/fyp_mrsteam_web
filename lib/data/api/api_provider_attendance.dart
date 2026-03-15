@@ -18,12 +18,13 @@ class ApiProviderAttendance extends ApiProviderBase {
     final query = <String, dynamic>{
       if (page != null) 'page': page,
       if (limit != null) 'limit': limit,
-      if (courseId != null) 'courseId': courseId,
-      if (tutorId != null) 'tutorId': tutorId,
-      if (schoolId != null) 'schoolId': schoolId,
-      if (startDate != null) 'startDate': startDate,
-      if (endDate != null) 'endDate': endDate,
+      if (courseId != null && courseId.trim().isNotEmpty) 'courseId': courseId.trim(),
+      if (tutorId != null && tutorId.trim().isNotEmpty) 'tutorId': tutorId.trim(),
+      if (schoolId != null && schoolId.trim().isNotEmpty) 'schoolId': schoolId.trim(),
+      if (startDate != null && startDate.trim().isNotEmpty) 'startDate': startDate.trim(),
+      if (endDate != null && endDate.trim().isNotEmpty) 'endDate': endDate.trim(),
     };
+
     return await ApiProviderBase.get<Map<String, dynamic>>(
       MrSteamAPIs.attendance,
       query: query,
@@ -45,25 +46,29 @@ class ApiProviderAttendance extends ApiProviderBase {
   }
 
   Future<List<int>> exportAttendances({
-    required String courseId,
-    required String tutorId,
-    required String schoolId,
-    required String startDate,
-    required String endDate,
-    required String format,
-  }) async {
-    final query = <String, dynamic>{
-      'courseId': courseId,
-      'tutorId': tutorId,
-      'schoolId': schoolId,
-      'startDate': startDate,
-      'endDate': endDate,
-      'format': format,
-    };
-    return await ApiProviderBase.get<List<int>>(
-      MrSteamAPIs.attendanceExport,
-      query: query,
-      options: Options(responseType: ResponseType.bytes),
-    ).then((response) => response.data ?? <int>[]);
+  String? courseId,
+  String? tutorId,
+  String? schoolId,
+  String? startDate,
+  String? endDate,
+  String format = 'excel', // backend: csv | excel
+}) async {
+  final normalizedFormat =
+      format.toLowerCase() == 'xlsx' ? 'excel' : format.toLowerCase();
+
+  final query = <String, dynamic>{
+    'format': normalizedFormat,
+    if (courseId != null && courseId.trim().isNotEmpty) 'courseId': courseId.trim(),
+    if (tutorId != null && tutorId.trim().isNotEmpty) 'tutorId': tutorId.trim(),
+    if (schoolId != null && schoolId.trim().isNotEmpty) 'schoolId': schoolId.trim(),
+    if (startDate != null && startDate.trim().isNotEmpty) 'startDate': startDate.trim(),
+    if (endDate != null && endDate.trim().isNotEmpty) 'endDate': endDate.trim(),
+  };
+
+  return await ApiProviderBase.get<List<int>>(
+    MrSteamAPIs.attendanceExport,
+    query: query,
+    options: Options(responseType: ResponseType.bytes),
+  ).then((response) => response.data ?? <int>[]);
   }
 }

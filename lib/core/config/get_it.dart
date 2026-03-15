@@ -6,6 +6,7 @@ import 'package:fyp_mrsteam_web/data/api/api_provider_school.dart';
 import 'package:fyp_mrsteam_web/data/api/api_provider_leave.dart';
 import 'package:fyp_mrsteam_web/data/api/api_provider_attendance.dart';
 import 'package:fyp_mrsteam_web/data/api/api_provider_statistics.dart';
+import 'package:fyp_mrsteam_web/data/api/api_provider_files.dart';
 import 'package:fyp_mrsteam_web/data/repo/repo_auth.dart';
 import 'package:get_it/get_it.dart';
 
@@ -37,6 +38,7 @@ Future<void> initGetIt() async {
   getIt.registerLazySingleton<ApiProviderAttendance>(() => ApiProviderAttendance());
   getIt.registerLazySingleton<ApiProviderLeave>(() => ApiProviderLeave());
   getIt.registerLazySingleton<ApiProviderStatistics>(() => ApiProviderStatistics());
+  getIt.registerLazySingleton<ApiProviderFiles>(() => ApiProviderFiles());
 
   // Repositories
   getIt.registerLazySingleton<AuthRepo>(() => AuthRepo(getIt<ApiProviderAuth>()));
