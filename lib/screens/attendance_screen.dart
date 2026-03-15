@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:html' as html;
+import 'package:excel/excel.dart' show Excel, TextCellValue;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/status_badge.dart';
@@ -13,6 +18,8 @@ import '../data/model/response/res_attendance.dart';
 import '../data/model/response/res_course.dart';
 import '../data/model/response/res_school.dart';
 import '../data/model/response/res_user.dart';
+
+enum ExportFormat { csv, excel }
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({Key? key}) : super(key: key);
@@ -38,7 +45,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Map<String, CourseRes> coursesMap = {};
   Map<String, SchoolRes> schoolsMap = {};
   Map<String, UserResponse> tutorsMap = {};
-  
+
   // Filter options
   List<UserResponse> tutorOptions = [];
   List<CourseRes> courseOptions = [];
@@ -80,7 +87,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       tutorsMap.clear();
       coursesMap.clear();
       schoolsMap.clear();
-      
+
       for (var tutor in tutorOptions) {
         if (tutor.id != null) {
           tutorsMap[tutor.id!] = tutor;
@@ -151,24 +158,72 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  Future<void> _exportRecords() async {
+  Future<ExportFormat?> _showExportFormatDialog() async {
+    return showDialog<ExportFormat>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export Format'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.table_chart_outlined),
+              title: const Text('CSV'),
+              onTap: () => Navigator.pop(context, ExportFormat.csv),
+            ),
+            ListTile(
+              leading: const Icon(Icons.grid_on_outlined),
+              title: const Text('Excel (.xlsx)'),
+              onTap: () => Navigator.pop(context, ExportFormat.excel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportRecords(ExportFormat format) async {
     setState(() => isExporting = true);
 
     try {
-      final bytes = await _attendanceApi.exportAttendances(
-        courseId: selectedCourseId ?? '',
-        tutorId: selectedTutorId ?? '',
-        schoolId: selectedSchoolId ?? '',
-        startDate: '',
-        endDate: '',
-        format: 'csv',
-      );
+      final records = _getFilteredAttendances();
+      if (records.isEmpty) {
+        throw Exception('No attendance records to export.');
+      }
 
-      // Handle file download (simplified - you may need to implement actual file saving)
+      final rows = _buildExportRows(records);
+      final now = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final baseName = 'attendance_records_$now';
+
+      if (format == ExportFormat.csv) {
+        final csvText = _toCsv(rows);
+        // BOM for better Excel UTF-8 compatibility
+        final bytes = Uint8List.fromList(utf8.encode('\uFEFF$csvText'));
+        _downloadBytesFile(
+          bytes: bytes,
+          fileName: '$baseName.csv',
+          mimeType: 'text/csv;charset=utf-8',
+        );
+      } else {
+        final bytes = _toXlsx(rows);
+        _downloadBytesFile(
+          bytes: bytes,
+          fileName: '$baseName.xlsx',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+      }
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export completed! ${bytes.length} bytes downloaded.')),
+        SnackBar(
+          content: Text(
+            'Export completed: ${format == ExportFormat.csv ? '$baseName.csv' : '$baseName.xlsx'}',
+          ),
+        ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Export failed: ${e.toString()}'),
@@ -176,8 +231,130 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
       );
     } finally {
-      setState(() => isExporting = false);
+      if (mounted) {
+        setState(() => isExporting = false);
+      }
     }
+  }
+
+  List<AttendanceRes> _getFilteredAttendances() {
+    final now = DateTime.now();
+
+    final filteredAttendances = attendances.where((attendance) {
+      // Exclude future classes
+      try {
+        final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
+        if (scheduledStart.isAfter(now)) {
+          return false;
+        }
+      } catch (_) {}
+
+      // Status filter
+      if (selectedStatus != null) {
+        final status = _getStatusFromAttendance(attendance);
+        if (status != selectedStatus) return false;
+      }
+
+      // Search filter
+      if (searchQuery.isNotEmpty) {
+        final tutor = tutorsMap[attendance.tutorId];
+        final course = coursesMap[attendance.courseId];
+        final school = schoolsMap[attendance.schoolId];
+
+        final tutorName = tutor?.name.toLowerCase() ?? '';
+        final courseName = course?.name.toLowerCase() ?? '';
+        final courseCode = (course?.courseCode ?? '').toLowerCase();
+        final schoolName = school?.name.toLowerCase() ?? '';
+
+        if (!tutorName.contains(searchQuery) &&
+            !courseName.contains(searchQuery) &&
+            !courseCode.contains(searchQuery) &&
+            !schoolName.contains(searchQuery)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+
+    // Most recent first
+    filteredAttendances.sort((a, b) {
+      final aStart = a.timestamp.start.toInt();
+      final bStart = b.timestamp.start.toInt();
+      return bStart.compareTo(aStart);
+    });
+
+    return filteredAttendances;
+  }
+
+  List<List<String>> _buildExportRows(List<AttendanceRes> records) {
+    final rows = <List<String>>[
+      ['Tutor', 'Class', 'School', 'Scheduled Time', 'Check-in Time', 'Status'],
+    ];
+
+    for (final attendance in records) {
+      final tutor = tutorsMap[attendance.tutorId];
+      final course = coursesMap[attendance.courseId];
+      final school = schoolsMap[attendance.schoolId];
+      final status = _getStatusFromAttendance(attendance);
+
+      rows.add([
+        tutor?.name ?? attendance.tutorId,
+        _formatClassDisplayName(course, attendance.courseId),
+        school?.name ?? attendance.schoolId,
+        _formatTimestamp(attendance.timestamp).replaceAll('\n', ' '),
+        _formatCheckInTime(attendance.checkInTime).replaceAll('\n', ' '),
+        status,
+      ]);
+    }
+
+    return rows;
+  }
+
+  String _toCsv(List<List<String>> rows) {
+    String esc(String v) {
+      final needQuote =
+          v.contains(',') || v.contains('"') || v.contains('\n') || v.contains('\r');
+      final safe = v.replaceAll('"', '""');
+      return needQuote ? '"$safe"' : safe;
+    }
+
+    return rows.map((row) => row.map(esc).join(',')).join('\n');
+  }
+
+  Uint8List _toXlsx(List<List<String>> rows) {
+    final excel = Excel.createExcel();
+
+    // Remove default sheet if exists
+    if (excel.sheets.containsKey('Sheet1')) {
+      excel.delete('Sheet1');
+    }
+
+    final sheet = excel['Attendance'];
+    for (final row in rows) {
+      sheet.appendRow(row.map((v) => TextCellValue(v)).toList());
+    }
+
+    final encoded = excel.encode();
+    return Uint8List.fromList(encoded ?? <int>[]);
+  }
+
+  void _downloadBytesFile({
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) {
+    final blob = html.Blob([bytes], mimeType);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    final anchor = html.AnchorElement(href: url)
+      ..style.display = 'none'
+      ..download = fileName;
+
+    html.document.body?.children.add(anchor);
+    anchor.click();
+    anchor.remove();
+    html.Url.revokeObjectUrl(url);
   }
 
   void _showCreateSchoolDialog() {
@@ -199,24 +376,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   String _getStatusFromAttendance(AttendanceRes attendance) {
-    if (!attendance.checked) {
-      return 'Absent';
-    }
-    
-    if (attendance.checkInTime != null) {
-      try {
-        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
-        final checkIn = DateTime.parse(attendance.checkInTime!);
-        
-        // If checked in more than 5 minutes late
-        if (checkIn.isAfter(scheduledStart.add(Duration(minutes: 5)))) {
-          return 'Late';
-        }
-      } catch (e) {
-        // If parsing fails, just check if checked
+    if (!attendance.checked) return 'Absent';
+
+    final checkIn = _isoToLocal(attendance.checkInTime);
+    if (checkIn == null) return 'Present';
+
+    try {
+      final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
+
+      // Late threshold = 5 minutes
+      if (checkIn.isAfter(scheduledStart.add(const Duration(minutes: 5)))) {
+        return 'Late';
       }
-    }
-    
+    } catch (_) {}
+
     return 'Present';
   }
 
@@ -235,29 +408,48 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   String _formatTimestamp(CourseTimestampRes timestamp) {
     try {
-      final start = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt());
-      final end = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt());
+      final start = _epochMsToLocal(timestamp.start);
+      final end = _epochMsToLocal(timestamp.end);
       final dateFormat = DateFormat('yyyy-MM-dd');
       final timeFormat = DateFormat('HH:mm');
-      
+
       return '${dateFormat.format(start)}\n${timeFormat.format(start)} - ${timeFormat.format(end)}';
     } catch (e) {
       return '-';
     }
   }
 
-  String _formatCheckInTime(String? checkInTime) {
-    if (checkInTime == null) return '-';
-    
+  DateTime _epochMsToLocal(num ms) {
+    return DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true).toLocal();
+  }
+
+  DateTime? _isoToLocal(String? iso) {
+    if (iso == null || iso.isEmpty) return null;
     try {
-      final dateTime = DateTime.parse(checkInTime);
-      final dateFormat = DateFormat('yyyy-MM-dd');
-      final timeFormat = DateFormat('HH:mm');
-      
-      return '${dateFormat.format(dateTime)}\n${timeFormat.format(dateTime)}';
-    } catch (e) {
-      return checkInTime;
+      return DateTime.parse(iso).toLocal();
+    } catch (_) {
+      return null;
     }
+  }
+
+  String _formatCheckInTime(String? checkInTime) {
+    final dt = _isoToLocal(checkInTime);
+    if (dt == null) return '-';
+
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    final timeFormat = DateFormat('HH:mm');
+    return '${dateFormat.format(dt)}\n${timeFormat.format(dt)}';
+  }
+
+  String _formatClassDisplayName(CourseRes? course, String fallbackId) {
+    if (course == null) return fallbackId;
+
+    final code = (course.courseCode ?? '').trim();
+    final name = course.name.trim();
+
+    if (code.isEmpty) return name.isNotEmpty ? name : fallbackId;
+    if (name.isEmpty) return code;
+    return '$code $name';
   }
 
   @override
@@ -271,10 +463,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Page Title
               Text(
                 'Tutor Attendance Records',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w600,
                 ),
@@ -306,7 +497,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: AppColors.primary, width: 2),
                   ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 ),
               ),
               const SizedBox(height: 24),
@@ -320,9 +511,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   _buildCourseDropdown(),
                   _buildSchoolDropdown(),
                   _buildStatusDropdown(),
-                  // Refresh Button
                   IconButton(
-                    icon: Icon(Icons.refresh),
+                    icon: const Icon(Icons.refresh),
                     onPressed: _loadData,
                     tooltip: 'Refresh',
                   ),
@@ -332,9 +522,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
               // Content
               if (isLoading)
-                Center(
+                const Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(40.0),
+                    padding: EdgeInsets.all(40.0),
                     child: CircularProgressIndicator(),
                   ),
                 )
@@ -344,19 +534,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     padding: const EdgeInsets.all(40.0),
                     child: Column(
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
                         const SizedBox(height: 16),
-                        Text('Error loading attendance', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Error loading attendance',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 8),
                         Text(errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
                         const SizedBox(height: 16),
-                        ElevatedButton(onPressed: _loadData, child: Text('Retry')),
+                        ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
                       ],
                     ),
                   ),
                 )
               else
                 _buildAttendanceTable(),
+
               const SizedBox(height: 24),
 
               // Export Button
@@ -366,7 +560,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   width: 180,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: isExporting ? null : () => _exportRecords(),
+                    onPressed: isExporting
+                        ? null
+                        : () async {
+                            final format = await _showExportFormatDialog();
+                            if (format != null) {
+                              await _exportRecords(format);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(
@@ -374,7 +575,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       ),
                     ),
                     child: isExporting
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -382,7 +583,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : Text(
+                        : const Text(
                             'Export Records',
                             style: TextStyle(
                               color: Colors.white,
@@ -401,11 +602,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildTutorDropdown() {
-    // Validate selected value exists in options
     final validTutorIds = tutorOptions.map((t) => t.id).toSet();
-    final currentValue = (selectedTutorId != null && validTutorIds.contains(selectedTutorId)) 
-        ? selectedTutorId 
-        : null;
+    final currentValue =
+        (selectedTutorId != null && validTutorIds.contains(selectedTutorId)) ? selectedTutorId : null;
 
     return SizedBox(
       width: 180,
@@ -420,14 +619,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: DropdownButton<String>(
             value: currentValue,
             isExpanded: true,
-            hint: Text('All Tutors', style: TextStyle(fontSize: 14)),
-            icon: Icon(Icons.arrow_drop_down, size: 20),
+            hint: const Text('All Tutors', style: TextStyle(fontSize: 14)),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
             items: [
-              DropdownMenuItem<String>(value: null, child: Text('All Tutors')),
-              ...tutorOptions.map((tutor) => DropdownMenuItem<String>(
-                value: tutor.id,
-                child: Text(tutor.name, style: TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
-              )),
+              const DropdownMenuItem<String>(value: null, child: Text('All Tutors')),
+              ...tutorOptions.map(
+                (tutor) => DropdownMenuItem<String>(
+                  value: tutor.id,
+                  child: Text(
+                    tutor.name,
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
             ],
             onChanged: (value) {
               setState(() => selectedTutorId = value);
@@ -440,11 +645,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildCourseDropdown() {
-    // Validate selected value exists in options
     final validCourseIds = courseOptions.map((c) => c.id).toSet();
-    final currentValue = (selectedCourseId != null && validCourseIds.contains(selectedCourseId)) 
-        ? selectedCourseId 
-        : null;
+    final currentValue =
+        (selectedCourseId != null && validCourseIds.contains(selectedCourseId)) ? selectedCourseId : null;
 
     return SizedBox(
       width: 180,
@@ -459,14 +662,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: DropdownButton<String>(
             value: currentValue,
             isExpanded: true,
-            hint: Text('All Classes', style: TextStyle(fontSize: 14)),
-            icon: Icon(Icons.arrow_drop_down, size: 20),
+            hint: const Text('All Classes', style: TextStyle(fontSize: 14)),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
             items: [
-              DropdownMenuItem<String>(value: null, child: Text('All Classes')),
-              ...courseOptions.map((course) => DropdownMenuItem<String>(
-                value: course.id,
-                child: Text(course.name, style: TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
-              )),
+              const DropdownMenuItem<String>(value: null, child: Text('All Classes')),
+              ...courseOptions.map(
+                (course) => DropdownMenuItem<String>(
+                  value: course.id,
+                  child: Text(
+                    course.name,
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
             ],
             onChanged: (value) {
               setState(() => selectedCourseId = value);
@@ -479,11 +688,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildSchoolDropdown() {
-    // Validate selected value exists in options
     final validSchoolIds = schoolOptions.map((s) => s.id).toSet();
-    final currentValue = (selectedSchoolId != null && validSchoolIds.contains(selectedSchoolId)) 
-        ? selectedSchoolId 
-        : null;
+    final currentValue =
+        (selectedSchoolId != null && validSchoolIds.contains(selectedSchoolId)) ? selectedSchoolId : null;
 
     return SizedBox(
       width: 180,
@@ -498,10 +705,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: DropdownButton<String>(
             value: currentValue,
             isExpanded: true,
-            hint: Text('All Schools', style: TextStyle(fontSize: 14)),
-            icon: Icon(Icons.arrow_drop_down, size: 20),
+            hint: const Text('All Schools', style: TextStyle(fontSize: 14)),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
             items: [
-              DropdownMenuItem<String>(value: null, child: Text('All Schools')),
+              const DropdownMenuItem<String>(value: null, child: Text('All Schools')),
               DropdownMenuItem<String>(
                 value: '__create_new__',
                 child: Row(
@@ -522,10 +729,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ],
                 ),
               ),
-              ...schoolOptions.map((school) => DropdownMenuItem<String>(
-                value: school.id,
-                child: Text(school.name, style: TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
-              )),
+              ...schoolOptions.map(
+                (school) => DropdownMenuItem<String>(
+                  value: school.id,
+                  child: Text(
+                    school.name,
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
             ],
             onChanged: (value) {
               if (value == '__create_new__') {
@@ -542,11 +755,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildStatusDropdown() {
-    // Validate selected status is valid
     final validStatuses = {'Present', 'Absent', 'Late'};
-    final currentValue = (selectedStatus != null && validStatuses.contains(selectedStatus)) 
-        ? selectedStatus 
-        : null;
+    final currentValue =
+        (selectedStatus != null && validStatuses.contains(selectedStatus)) ? selectedStatus : null;
 
     return SizedBox(
       width: 180,
@@ -561,9 +772,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: DropdownButton<String>(
             value: currentValue,
             isExpanded: true,
-            hint: Text('All Status', style: TextStyle(fontSize: 14)),
-            icon: Icon(Icons.arrow_drop_down, size: 20),
-            items: [
+            hint: const Text('All Status', style: TextStyle(fontSize: 14)),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
+            items: const [
               DropdownMenuItem<String>(value: null, child: Text('All Status')),
               DropdownMenuItem<String>(value: 'Present', child: Text('Present')),
               DropdownMenuItem<String>(value: 'Absent', child: Text('Absent')),
@@ -579,52 +790,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildAttendanceTable() {
-    final now = DateTime.now();
-    
-    // Filter attendances based on search, status, and exclude future classes
-    final filteredAttendances = attendances.where((attendance) {
-      // Exclude future classes - only show if scheduled time has passed
-      try {
-        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
-        if (scheduledStart.isAfter(now)) {
-          return false; // Skip future classes
-        }
-      } catch (e) {
-        // If we can't parse the timestamp, include it
-      }
-
-      // Status filter (client-side since API doesn't support status filter)
-      if (selectedStatus != null) {
-        final status = _getStatusFromAttendance(attendance);
-        if (status != selectedStatus) return false;
-      }
-
-      // Search filter
-      if (searchQuery.isNotEmpty) {
-        final tutor = tutorsMap[attendance.tutorId];
-        final course = coursesMap[attendance.courseId];
-        final school = schoolsMap[attendance.schoolId];
-        
-        final tutorName = tutor?.name.toLowerCase() ?? '';
-        final courseName = course?.name.toLowerCase() ?? '';
-        final schoolName = school?.name.toLowerCase() ?? '';
-        
-        if (!tutorName.contains(searchQuery) &&
-            !courseName.contains(searchQuery) &&
-            !schoolName.contains(searchQuery)) {
-          return false;
-        }
-      }
-
-      return true;
-    }).toList();
-
-    // Sort by date (most recent first)
-    filteredAttendances.sort((a, b) {
-      final aStart = a.timestamp.start.toInt();
-      final bStart = b.timestamp.start.toInt();
-      return bStart.compareTo(aStart); // Descending order (newest first)
-    });
+    final filteredAttendances = _getFilteredAttendances();
 
     if (filteredAttendances.isEmpty) {
       return Container(
@@ -639,7 +805,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             children: [
               Icon(Icons.event_busy, size: 48, color: AppColors.textSecondary),
               const SizedBox(height: 16),
-              Text('No attendance records found', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+              Text(
+                'No attendance records found',
+                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+              ),
             ],
           ),
         ),
@@ -702,7 +871,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              course?.name ?? attendance.courseId,
+              _formatClassDisplayName(course, attendance.courseId),
               style: _cellStyle().copyWith(color: AppColors.textSecondary),
             ),
           ),
@@ -781,7 +950,6 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   String? errorMessage;
 
   Future<void> _createSchool() async {
-    // Validate
     if (_nameController.text.trim().isEmpty) {
       setState(() => errorMessage = 'Please enter school name');
       return;
@@ -790,7 +958,6 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     final lat = double.tryParse(_latController.text.trim());
     final long = double.tryParse(_longController.text.trim());
 
-    // Only validate GPS if user entered something
     if (_latController.text.trim().isNotEmpty || _longController.text.trim().isNotEmpty) {
       if (lat == null || long == null) {
         setState(() => errorMessage = 'Please enter valid GPS coordinates');
@@ -846,12 +1013,12 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   'Create New School',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close),
+                  icon: const Icon(Icons.close),
                   onPressed: isSaving ? null : () => Navigator.of(context).pop(),
                 ),
               ],
@@ -870,12 +1037,12 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline, color: Colors.red, size: 20),
+                    const Icon(Icons.error_outline, color: Colors.red, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         errorMessage!,
-                        style: TextStyle(color: Colors.red, fontSize: 14),
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
                       ),
                     ),
                   ],
@@ -931,7 +1098,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _latController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: 'Latitude',
                       filled: true,
@@ -955,7 +1122,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _longController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: 'Longitude',
                       filled: true,
@@ -984,7 +1151,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             ),
             const SizedBox(height: 32),
 
-            // Action Buttons - Same size
+            // Action Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -1002,7 +1169,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: const Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1020,7 +1187,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                       ),
                     ),
                     child: isSaving
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -1028,7 +1195,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : Text('Create', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        : const Text('Create', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],

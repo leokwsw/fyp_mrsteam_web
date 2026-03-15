@@ -88,11 +88,21 @@ class _ClassListScreenState extends State<ClassListScreen> {
       final schoolsRes = futures[1] as SchoolListRes;
       final tutorsRes = futures[2] as dynamic;
 
+    // ===== Debug logs: parsed result =====
+      debugPrint('=== parsed courses === count=${coursesRes.items.length}');
+      if (coursesRes.items.isNotEmpty) {
+        final c = coursesRes.items.first;
+        debugPrint('first.id=${c.id}');
+        debugPrint('first.name=${c.name}');
+        debugPrint('first.courseCode=${c.courseCode}');
+        debugPrint('first.subjectCode(getter)=${c.subjectCode}');
+      }
+
       courseOptions = coursesRes.items;
       schoolOptions = schoolsRes.items;
       tutorOptions = tutorsRes.items;
 
-      // Validate selected values exist in options
+    // Validate selected values exist in options
       if (selectedCourseId != null &&
           !courseOptions.any((c) => c.id == selectedCourseId)) {
         selectedCourseId = null;
@@ -105,6 +115,10 @@ class _ClassListScreenState extends State<ClassListScreen> {
           !tutorOptions.any((t) => t.id == selectedTutorId)) {
         selectedTutorId = null;
       }
+
+      // Clear old map first (avoid stale data)
+      schoolsMap.clear();
+      tutorsMap.clear();
 
       // Build lookup maps
       for (var school in schoolOptions) {
@@ -122,7 +136,9 @@ class _ClassListScreenState extends State<ClassListScreen> {
         allCourses = coursesRes.items;
         isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[_loadData] error: $e');
+      debugPrint(st.toString());
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
@@ -183,7 +199,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
               const SizedBox(height: 16),
               _buildDetailRow('Tutor', classItem.tutorName),
               const SizedBox(height: 16),
-              _buildDetailRow('Location', classItem.location),
+              _buildDetailRow('Room', classItem.room),
               const SizedBox(height: 16),
               _buildStatusRow('Status', classItem.status),
               const SizedBox(height: 16),
@@ -323,6 +339,12 @@ class _ClassListScreenState extends State<ClassListScreen> {
         continue;
       }
 
+      // Build display name: subject code + class name
+      // Extract subject code from courseCode (e.g., "WADA" from "WADA000001")
+      final code = (course.courseCode ?? '').trim();
+      final className = course.name.trim();
+      final displayName = code.isNotEmpty ? '$code $className' : className;
+
       // Process each timestamp
       for (var timestamp in course.timestamps) {
         // Parse as UTC and convert to Hong Kong time for consistent comparison
@@ -354,12 +376,12 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
         classList.add(ClassListItem(
           courseId: course.id ?? '',
-          className: course.name,
+          className: displayName,
           schoolName: school?.name ?? 'Unknown School',
           tutorName: tutor?.name ?? 'Unknown Tutor',
           date: DateFormat('dd/MM/yyyy').format(startDateTime),
           time: '${_formatTime(startDateTime)} - ${_formatTime(endDateTime)}',
-          location: course.room,
+          room: course.room,
           status: status,
           startDateTime: startDateTime,
           overview: course.overview,
@@ -839,9 +861,9 @@ class _ClassListScreenState extends State<ClassListScreen> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 2, child: _buildHeaderCell('Class Name')),
-                Expanded(flex: 2, child: _buildHeaderCell('School')),
-                Expanded(flex: 2, child: _buildHeaderCell('Tutor')),
+                Expanded(flex: 1, child: _buildHeaderCell('Class Name')),
+                Expanded(flex: 3, child: _buildHeaderCell('School')),
+                Expanded(flex: 1, child: _buildHeaderCell('Tutor')),
                 Expanded(flex: 1, child: _buildHeaderCell('Date')),
                 Expanded(flex: 1, child: _buildHeaderCell('Time')),
                 Expanded(flex: 1, child: _buildHeaderCell('Location')),
@@ -878,21 +900,21 @@ class _ClassListScreenState extends State<ClassListScreen> {
         child: Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 1,
               child: Text(
                 classItem.className,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ),
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Text(
                 classItem.schoolName,
                 style: TextStyle(fontSize: 14),
               ),
             ),
             Expanded(
-              flex: 2,
+              flex: 1,
               child: Text(
                 classItem.tutorName,
                 style: TextStyle(fontSize: 14),
@@ -915,7 +937,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
             Expanded(
               flex: 1,
               child: Text(
-                classItem.location,
+                classItem.room,
                 style: TextStyle(fontSize: 14),
               ),
             ),
@@ -963,7 +985,7 @@ class ClassListItem {
   final String tutorName;
   final String date;
   final String time;
-  final String location;
+  final String room;
   final String status;
   final DateTime startDateTime;
   final String overview;
@@ -975,7 +997,7 @@ class ClassListItem {
     required this.tutorName,
     required this.date,
     required this.time,
-    required this.location,
+    required this.room,
     required this.status,
     required this.startDateTime,
     required this.overview,

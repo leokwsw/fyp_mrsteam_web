@@ -7,7 +7,14 @@ import 'package:fyp_mrsteam_web/data/model/response/res_message.dart';
 import 'package:fyp_mrsteam_web/data/model/response/res_signed_url.dart';
 
 class ApiProviderFiles extends ApiProviderBase {
-  String _encodePath(String path) => Uri.encodeComponent(path);
+  /// Encodes each path segment individually, preserving "/" separators.
+  /// Uri.encodeComponent would wrongly encode "/" → "%2F" causing 404s.
+  String _encodePath(String path) {
+    return path
+        .split('/')
+        .map(Uri.encodeComponent)
+        .join('/');
+  }
 
   Future<FileUploadRes> uploadFile(UploadFileReq req) async {
     return await ApiProviderBase.post<Map<String, dynamic>>(
