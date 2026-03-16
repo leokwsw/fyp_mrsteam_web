@@ -341,7 +341,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
       // Build display name: subject code + class name
       // Extract subject code from courseCode (e.g., "WADA" from "WADA000001")
-      final code = (course.courseCode ?? '').trim();
+      final code = course.courseCode.trim();
       final className = course.name.trim();
       final displayName = code.isNotEmpty ? '$code $className' : className;
 

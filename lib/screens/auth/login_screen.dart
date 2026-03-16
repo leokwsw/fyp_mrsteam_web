@@ -10,7 +10,7 @@ import '../../data/api/api_provider_auth.dart';
 import '../../data/model/request/req_login.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await AppPreferences.setAccessToken(response.accessToken);
       await AppPreferences.setRefreshToken(response.refreshToken);
       await AppPreferences.setSessionId(response.sessionId);
-      await AppPreferences.setUserId(response.user.id ?? '');
+      await AppPreferences.setUserId(response.user.id);
 
       if (mounted) {
         // Navigate to dashboard after successful login
