@@ -37,11 +37,50 @@ class CourseTimestampReq {
       CourseTimestampReq.fromJson(json);
 }
 
+class CourseFileReq {
+  final String originalName;
+  final String filename;
+  final String path;
+  final String url;
+  final int size;
+  final String mimetype;
+  /// UI-only: marks file loaded from API (not sent in request payload)
+  final bool isExisting;
+
+  CourseFileReq({
+    required this.originalName,
+    required this.filename,
+    required this.path,
+    required this.url,
+    required this.size,
+    required this.mimetype,
+    this.isExisting = false,
+  });
+
+  factory CourseFileReq.fromJson(Map<String, dynamic> json) => CourseFileReq(
+        originalName: json['originalName'] as String,
+        filename: json['filename'] as String,
+        path: json['path'] as String,
+        url: json['url'] as String,
+        size: json['size'] as int,
+        mimetype: json['mimetype'] as String,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'originalName': originalName,
+        'filename': filename,
+        'path': path,
+        'url': url,
+        'size': size,
+        'mimetype': mimetype,
+      };
+}
+
 class CreateCourseReq {
   final String name;
   final String overview;
   final String room;
-  final List<String> files;
+  final List<CourseFileReq> files;
   final String schoolId;
   final String tutorId;
   final List<CourseTimestampReq> timestamps;
@@ -63,7 +102,9 @@ class CreateCourseReq {
         json['name'] as String,
         json['overview'] as String,
         json['room'] as String,
-        (json['files'] as List<dynamic>).map((e) => e as String).toList(),
+        (json['files'] as List<dynamic>)
+            .map((e) => CourseFileReq.fromJson(e as Map<String, dynamic>))
+            .toList(),
         json['schoolId'] as String,
         json['tutorId'] as String,
         (json['timestamps'] as List<dynamic>)
@@ -76,7 +117,7 @@ class CreateCourseReq {
         'name': name,
         'overview': overview,
         'room': room,
-        'files': files,
+        'files': files.map((e) => e.toJson()).toList(),
         'schoolId': schoolId,
         'tutorId': tutorId,
         'timestamps': timestamps.map((e) => e.toJson()).toList(),
@@ -91,7 +132,7 @@ class UpdateCourseReq {
   final String? name;
   final String? overview;
   final String? room;
-  final List<String>? files;
+  final List<CourseFileReq>? files;
   final String? schoolId;
   final String? tutorId;
   final List<CourseTimestampReq>? timestamps;
@@ -113,8 +154,9 @@ class UpdateCourseReq {
         name: json['name'] as String?,
         overview: json['overview'] as String?,
         room: json['room'] as String?,
-        files:
-            (json['files'] as List<dynamic>?)?.map((e) => e as String).toList(),
+        files: (json['files'] as List<dynamic>?)
+            ?.map((e) => CourseFileReq.fromJson(e as Map<String, dynamic>))
+            .toList(),
         schoolId: json['schoolId'] as String?,
         tutorId: json['tutorId'] as String?,
         timestamps: (json['timestamps'] as List<dynamic>?)
@@ -127,7 +169,7 @@ class UpdateCourseReq {
         'name': name,
         'overview': overview,
         'room': room,
-        'files': files,
+        'files': files?.map((e) => e.toJson()).toList(),
         'schoolId': schoolId,
         'tutorId': tutorId,
         'timestamps': timestamps?.map((e) => e.toJson()).toList(),
