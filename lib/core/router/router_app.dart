@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fyp_mrsteam_web/core/util/app_preferences.dart';
 import 'package:fyp_mrsteam_web/screens/attendance_screen.dart';
 import 'package:fyp_mrsteam_web/screens/auth/login_screen.dart';
 import 'package:fyp_mrsteam_web/screens/auth/reset_password_screen.dart';

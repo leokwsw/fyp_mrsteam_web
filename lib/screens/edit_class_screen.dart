@@ -15,7 +15,6 @@ import '../data/api/api_provider_files.dart';
 import '../data/api/api_provider_school.dart';
 import '../data/api/api_provider_users.dart';
 import '../data/model/request/req_course.dart';
-import '../data/model/response/res_course_file.dart';
 import '../data/model/request/req_file.dart';
 import '../data/model/request/req_school.dart';
 import '../data/model/response/res_course.dart';

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
-import '../constants/text_styles.dart';
 
 class StatCard extends StatelessWidget {
   final String label;

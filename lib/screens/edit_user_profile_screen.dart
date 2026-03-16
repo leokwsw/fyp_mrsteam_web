@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../widgets/app_bar_widget.dart';
-import '../widgets/custom_button.dart';
 import '../core/config/get_it.dart';
 import '../data/api/api_provider_users.dart';
 import '../data/model/request/req_user.dart';
