@@ -21,7 +21,7 @@ import '../data/model/response/res_user.dart';
 import '../services/places_search_service.dart';
 
 class CreateClassScreen extends StatefulWidget {
-  const CreateClassScreen({Key? key}) : super(key: key);
+  const CreateClassScreen({super.key});
 
   @override
   State<CreateClassScreen> createState() => _CreateClassScreenState();
@@ -162,6 +162,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           final request = UploadFileReq(multipartFile);
           final response = await _filesApi.uploadFile(request);
 
+          if (!mounted) return;
           setState(() {
             uploadedFiles.add(UploadedFileItem(
               originalName: response.file.originalName,
@@ -180,6 +181,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ),
           );
         } catch (e) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content:
