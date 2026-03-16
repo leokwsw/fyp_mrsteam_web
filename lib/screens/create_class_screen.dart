@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -21,27 +22,10 @@ import '../data/model/response/res_user.dart';
 import '../services/places_search_service.dart';
 
 class CreateClassScreen extends StatefulWidget {
-  const CreateClassScreen({Key? key}) : super(key: key);
+  const CreateClassScreen({super.key});
 
   @override
   State<CreateClassScreen> createState() => _CreateClassScreenState();
-}
-
-/// 已上傳文件項目
-class UploadedFileItem {
-  final String originalName;
-  final String path;
-  final String url;
-  final int size;
-  final String mimetype;
-
-  UploadedFileItem({
-    required this.originalName,
-    required this.path,
-    required this.url,
-    required this.size,
-    required this.mimetype,
-  });
 }
 
 class _CreateClassScreenState extends State<CreateClassScreen> {
@@ -72,7 +56,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   List<SchoolRes> schools = [];
   List<UserResponse> tutors = [];
-  List<UploadedFileItem> uploadedFiles = [];
+  List<CourseFileReq> uploadedFiles = [];
 
   bool isLoading = true;
   bool isSaving = false;
@@ -113,6 +97,18 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     }
   }
 
+  /// Build Content-Disposition headers for UTF-8/Chinese filename support (RFC 5987)
+  Map<String, List<String>> _utf8FilenameHeaders(String filename) {
+    final ext = path.extension(filename);
+    final fallback = 'file${ext.isEmpty ? '' : ext}';
+    final encoded = Uri.encodeComponent(filename);
+    return {
+      'Content-Disposition': [
+        'form-data; name="file"; filename="$fallback"; filename*=UTF-8\'\'$encoded',
+      ],
+    };
+  }
+
   /// 上傳文件
   Future<void> _uploadFiles() async {
     try {
@@ -128,7 +124,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           'xlsx',
           'png',
           'jpg',
-          'jpeg'
+          'jpeg',
         ],
         allowMultiple: true,
         withData: true, // 確保文件數據可用於 Web
@@ -143,17 +139,20 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           MultipartFile multipartFile;
 
           // Web 平台使用 bytes，其他平台使用 path
+          final utf8Headers = _utf8FilenameHeaders(file.name);
           if (file.bytes != null) {
             // Web 平台
             multipartFile = MultipartFile.fromBytes(
               file.bytes!,
               filename: file.name,
+              headers: utf8Headers,
             );
           } else if (file.path != null) {
             // 桌面/移動平台
             multipartFile = await MultipartFile.fromFile(
               file.path!,
               filename: file.name,
+              headers: utf8Headers,
             );
           } else {
             continue; // 跳過無效文件
@@ -162,9 +161,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           final request = UploadFileReq(multipartFile);
           final response = await _filesApi.uploadFile(request);
 
+          if (!mounted) return;
           setState(() {
-            uploadedFiles.add(UploadedFileItem(
+            uploadedFiles.add(CourseFileReq(
               originalName: response.file.originalName,
+              filename: response.file.originalName,
               path: response.file.path,
               url: response.file.url,
               size: response.file.size.toInt(),
@@ -180,10 +181,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ),
           );
         } catch (e) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  Text('❌ Failed to upload ${file.name}: ${e.toString()}'),
+              content: Text('❌ Failed to upload ${file.name}: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -234,7 +235,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         CourseTimestampReq(
           startDateTime!.millisecondsSinceEpoch,
           endDateTime!.millisecondsSinceEpoch,
-        )
+        ),
       ];
     }
 
@@ -300,10 +301,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             children: [
               Text(
                 'How many class sessions should be created?',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -319,8 +317,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: AppColors.primary, width: 2),
                   ),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 onSubmitted: (value) {
                   final count = int.tryParse(value);
@@ -420,14 +420,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     setState(() => isSaving = true);
 
     try {
-      // Build file paths list
-      final filePaths = uploadedFiles.map((f) => f.path).toList();
-
       final request = CreateCourseReq(
         _classNameController.text.trim(),
         _overviewController.text.trim(),
         _roomController.text.trim(),
-        filePaths,
+        uploadedFiles,
         selectedSchoolId!,
         selectedTutorId!,
         timestamps,
@@ -459,10 +456,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -551,16 +545,22 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
                   // Start Date and Time
                   _buildDateTimeField(
-                      'Start Date and Time *', _startTimeController, (dt) {
-                    setState(() => startDateTime = dt);
-                  }),
+                    'Start Date and Time *',
+                    _startTimeController,
+                    (dt) {
+                      setState(() => startDateTime = dt);
+                    },
+                  ),
                   const SizedBox(height: 24),
 
                   // End Date and Time
                   _buildDateTimeField(
-                      'End Date and Time *', _endTimeController, (dt) {
-                    setState(() => endDateTime = dt);
-                  }),
+                    'End Date and Time *',
+                    _endTimeController,
+                    (dt) {
+                      setState(() => endDateTime = dt);
+                    },
+                  ),
                   const SizedBox(height: 24),
 
                   // School Dropdown
@@ -605,18 +605,22 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                           fillColor: AppColors.inputBackground,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                BorderSide(color: AppColors.inputBorder),
+                            borderSide: BorderSide(
+                              color: AppColors.inputBorder,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                BorderSide(color: AppColors.inputBorder),
+                            borderSide: BorderSide(
+                              color: AppColors.inputBorder,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -642,8 +646,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                         width: 120,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed:
-                              isSaving ? null : () => context.go('/class'),
+                          onPressed: isSaving
+                              ? null
+                              : () => context.go('/class'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.textPrimary,
@@ -653,9 +658,13 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: Text('Cancel',
-                              style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -679,13 +688,17 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
-                              : Text('Save',
+                              : Text(
+                                  'Save',
                                   style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -726,17 +739,17 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             ),
             Text(
               'Recurring Class',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(width: 8),
             Tooltip(
               message:
                   'Create multiple class sessions at regular intervals (weekly, bi-weekly, or monthly)',
-              child: Icon(Icons.info_outline,
-                  size: 18, color: AppColors.textSecondary),
+              child: Icon(
+                Icons.info_outline,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -795,8 +808,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text('every',
-                        style: TextStyle(color: AppColors.textSecondary)),
+                    Text(
+                      'every',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                     const SizedBox(width: 8),
                     SizedBox(
                       width: 60,
@@ -804,22 +819,28 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           hintText: '1',
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                BorderSide(color: AppColors.inputBorder),
+                            borderSide: BorderSide(
+                              color: AppColors.inputBorder,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                BorderSide(color: AppColors.inputBorder),
+                            borderSide: BorderSide(
+                              color: AppColors.inputBorder,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(
-                                color: AppColors.primary, width: 2),
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                         textAlign: TextAlign.center,
@@ -848,8 +869,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Choose one: end by date or by number of occurrences',
-                  style:
-                      TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -860,12 +883,14 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                         onPressed: () async {
                           final date = await showDatePicker(
                             context: context,
-                            initialDate: recurrenceEndDate ??
+                            initialDate:
+                                recurrenceEndDate ??
                                 startDateTime ??
                                 DateTime.now(),
                             firstDate: startDateTime ?? DateTime.now(),
-                            lastDate:
-                                DateTime.now().add(Duration(days: 365 * 2)),
+                            lastDate: DateTime.now().add(
+                              Duration(days: 365 * 2),
+                            ),
                           );
                           if (date != null) {
                             setState(() {
@@ -879,7 +904,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                               ? AppColors.primary.withOpacity(0.1)
                               : AppColors.inputBackground,
                           padding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             side: BorderSide(
@@ -923,8 +950,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.only(left: 4),
-                                  child: Icon(Icons.close,
-                                      size: 16, color: AppColors.primary),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                           ],
@@ -942,7 +972,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                               ? AppColors.primary.withOpacity(0.1)
                               : AppColors.inputBackground,
                           padding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                             side: BorderSide(
@@ -983,8 +1015,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.only(left: 4),
-                                  child: Icon(Icons.close,
-                                      size: 16, color: AppColors.primary),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                           ],
@@ -998,70 +1033,75 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 if (recurrenceEndDate != null ||
                     recurrenceOccurrences != null) ...[
                   const SizedBox(height: 16),
-                  Builder(builder: (context) {
-                    final sessionCount = _getPreviewSessionCount();
-                    final hasRequiredFields = startDateTime != null &&
-                        endDateTime != null &&
-                        selectedFrequency != null;
+                  Builder(
+                    builder: (context) {
+                      final sessionCount = _getPreviewSessionCount();
+                      final hasRequiredFields =
+                          startDateTime != null &&
+                          endDateTime != null &&
+                          selectedFrequency != null;
 
-                    return Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: hasRequiredFields && sessionCount > 0
-                            ? AppColors.primary.withOpacity(0.05)
-                            : Colors.orange.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
+                      return Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
                           color: hasRequiredFields && sessionCount > 0
-                              ? AppColors.primary.withOpacity(0.2)
-                              : Colors.orange.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            hasRequiredFields && sessionCount > 0
-                                ? Icons.event_repeat
-                                : Icons.warning_amber_rounded,
-                            size: 20,
+                              ? AppColors.primary.withOpacity(0.05)
+                              : Colors.orange.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
                             color: hasRequiredFields && sessionCount > 0
-                                ? AppColors.primary
-                                : Colors.orange,
+                                ? AppColors.primary.withOpacity(0.2)
+                                : Colors.orange.withOpacity(0.2),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  hasRequiredFields && sessionCount > 0
-                                      ? 'Will generate $sessionCount class session${sessionCount != 1 ? 's' : ''}'
-                                      : 'Set start/end time and frequency to preview sessions',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: hasRequiredFields && sessionCount > 0
-                                        ? AppColors.primary
-                                        : Colors.orange[800],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                if (hasRequiredFields && sessionCount > 0) ...[
-                                  const SizedBox(height: 4),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              hasRequiredFields && sessionCount > 0
+                                  ? Icons.event_repeat
+                                  : Icons.warning_amber_rounded,
+                              size: 20,
+                              color: hasRequiredFields && sessionCount > 0
+                                  ? AppColors.primary
+                                  : Colors.orange,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    _getRecurrenceSummary(sessionCount),
+                                    hasRequiredFields && sessionCount > 0
+                                        ? 'Will generate $sessionCount class session${sessionCount != 1 ? 's' : ''}'
+                                        : 'Set start/end time and frequency to preview sessions',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                      color:
+                                          hasRequiredFields && sessionCount > 0
+                                          ? AppColors.primary
+                                          : Colors.orange[800],
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
+                                  if (hasRequiredFields &&
+                                      sessionCount > 0) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _getRecurrenceSummary(sessionCount),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ],
             ),
@@ -1122,7 +1162,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       'Thursday',
       'Friday',
       'Saturday',
-      'Sunday'
+      'Sunday',
     ];
     return days[weekday - 1];
   }
@@ -1152,16 +1192,16 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           children: [
             Text(
               'Upload Teaching Materials',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(width: 8),
             Tooltip(
               message: 'PDF, PPT, DOC, XLS, Images (Max 10MB each)',
-              child: Icon(Icons.info_outline,
-                  size: 18, color: AppColors.textSecondary),
+              child: Icon(
+                Icons.info_outline,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -1192,172 +1232,172 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   ),
                 )
               : uploadedFiles.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.cloud_upload_outlined,
-                            size: 48,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Drag and drop files here or click to upload',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'PPT, PDF, DOC, XLS, PNG, JPG',
-                            style: TextStyle(
-                              color:
-                                  AppColors.textSecondary.withOpacity(0.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _uploadFiles,
-                            icon: Icon(Icons.folder_open, size: 18),
-                            label: Text('Browse Files'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                            ),
-                          ),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 48,
+                        color: AppColors.textSecondary,
                       ),
-                    )
-                  : Center(
-                      child: Container(
-                        padding: EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: uploadedFiles.length,
-                                itemBuilder: (context, index) {
-                                  final file = uploadedFiles[index];
-                                  return Container(
-                                    margin: EdgeInsets.only(bottom: 8),
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius:
-                                          BorderRadius.circular(8),
-                                      border: Border.all(
-                                          color: AppColors.cardBorder),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Drag and drop files here or click to upload',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'PPT, PDF, DOC, XLS, PNG, JPG',
+                        style: TextStyle(
+                          color: AppColors.textSecondary.withOpacity(0.7),
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _uploadFiles,
+                        icon: Icon(Icons.folder_open, size: 18),
+                        label: Text('Browse Files'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Center(
+                  child: Container(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: uploadedFiles.length,
+                            itemBuilder: (context, index) {
+                              final file = uploadedFiles[index];
+                              return Container(
+                                margin: EdgeInsets.only(bottom: 8),
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: AppColors.cardBorder,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _getFileIcon(file.mimetype),
+                                      color: AppColors.primary,
+                                      size: 32,
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          _getFileIcon(file.mimetype),
-                                          color: AppColors.primary,
-                                          size: 32,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                file.originalName,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight:
-                                                      FontWeight.w500,
-                                                ),
-                                                overflow:
-                                                    TextOverflow.ellipsis,
-                                              ),
-                                              Text(
-                                                _formatFileSize(file.size),
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: AppColors
-                                                      .textSecondary,
-                                                ),
-                                              ),
-                                            ],
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            file.originalName,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                        IconButton(
-                                          icon: Icon(
-                                              Icons.delete_outline,
-                                              color: Colors.red),
-                                          onPressed: () =>
-                                              _removeFile(index),
-                                          tooltip: 'Remove',
-                                        ),
-                                      ],
+                                          Text(
+                                            _formatFileSize(file.size),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  );
-                                },
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () => _removeFile(index),
+                                      tooltip: 'Remove',
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _uploadFiles,
+                              icon: Icon(Icons.add, size: 18),
+                              label: Text('Add More Files'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: _uploadFiles,
-                                  icon: Icon(Icons.add, size: 18),
-                                  label: Text('Add More Files'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                OutlinedButton.icon(
-                                  onPressed: () => setState(
-                                      () => uploadedFiles.clear()),
-                                  icon:
-                                      Icon(Icons.delete_sweep, size: 18),
-                                  label: Text('Clear All'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.red,
-                                    side: BorderSide(color: Colors.red),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  setState(() => uploadedFiles.clear()),
+                              icon: Icon(Icons.delete_sweep, size: 18),
+                              label: Text('Clear All'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: BorderSide(color: Colors.red),
+                              ),
                             ),
                           ],
                         ),
-                      ),
+                      ],
                     ),
+                  ),
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildDateTimeField(String label, TextEditingController controller,
-      Function(DateTime) onSelected) {
+  Widget _buildDateTimeField(
+    String label,
+    TextEditingController controller,
+    Function(DateTime) onSelected,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           decoration: InputDecoration(
             hintText: 'YYYY/MM/DD HH:MM',
-            hintStyle:
-                TextStyle(color: AppColors.textSecondary.withOpacity(0.5)),
-            suffixIcon:
-                Icon(Icons.calendar_today, color: AppColors.textSecondary),
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary.withOpacity(0.5),
+            ),
+            suffixIcon: Icon(
+              Icons.calendar_today,
+              color: AppColors.textSecondary,
+            ),
             filled: true,
             fillColor: AppColors.inputBackground,
             border: OutlineInputBorder(
@@ -1407,7 +1447,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                     _showError('End time must be later than current time');
                     return;
                   }
-                  if (startDateTime != null && dateTime.isBefore(startDateTime!)) {
+                  if (startDateTime != null &&
+                      dateTime.isBefore(startDateTime!)) {
                     _showError('End time must be later than start time');
                     return;
                   }
@@ -1431,10 +1472,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       children: [
         Text(
           'School *',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         Container(
@@ -1447,8 +1485,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: selectedSchoolId,
-              hint: Text('Select School',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              hint: Text(
+                'Select School',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
               items: [
@@ -1457,8 +1497,11 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   value: '__create_new__',
                   child: Row(
                     children: [
-                      Icon(Icons.add_circle_outline,
-                          size: 20, color: AppColors.primary),
+                      Icon(
+                        Icons.add_circle_outline,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Create New School',
@@ -1476,10 +1519,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   child: Divider(height: 1),
                 ),
                 // Existing schools
-                ...schools.map((school) => DropdownMenuItem(
-                      value: school.id,
-                      child: Text(school.name),
-                    )),
+                ...schools.map(
+                  (school) => DropdownMenuItem(
+                    value: school.id,
+                    child: Text(school.name),
+                  ),
+                ),
               ],
               onChanged: (value) {
                 if (value == '__create_new__') {
@@ -1501,10 +1546,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       children: [
         Text(
           'Tutor *',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         Container(
@@ -1517,15 +1559,19 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: selectedTutorId,
-              hint: Text('Select Tutor',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              hint: Text(
+                'Select Tutor',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),
               items: tutors
-                  .map((tutor) => DropdownMenuItem(
-                        value: tutor.id,
-                        child: Text(tutor.name),
-                      ))
+                  .map(
+                    (tutor) => DropdownMenuItem(
+                      value: tutor.id,
+                      child: Text(tutor.name),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) {
                 setState(() => selectedTutorId = value);
@@ -1558,11 +1604,8 @@ class MapPickerDialog extends StatefulWidget {
   final double? initialLat;
   final double? initialLng;
 
-  const MapPickerDialog({
-    Key? key,
-    this.initialLat,
-    this.initialLng,
-  }) : super(key: key);
+  const MapPickerDialog({Key? key, this.initialLat, this.initialLng})
+    : super(key: key);
 
   @override
   State<MapPickerDialog> createState() => _MapPickerDialogState();
@@ -1575,7 +1618,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   bool _isLoadingLocation = true;
   String? _locationError;
   String? _selectedAddress; // 完整地址
-  String? _selectedStreet;  // 街道名稱（若可取得）
+  String? _selectedStreet; // 街道名稱（若可取得）
   Set<Marker> _markers = {};
 
   static const LatLng _defaultLocation = LatLng(22.3193, 114.1694); // HK
@@ -1853,8 +1896,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
 
             if (_locationError != null && !_isLoadingLocation) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -1862,13 +1907,19 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange, size: 18),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _locationError!,
-                        style: TextStyle(color: Colors.orange[800], fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     TextButton(
@@ -1981,8 +2032,12 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : Icon(Icons.my_location, size: 18),
-                  label: Text(_isLoadingLocation ? 'Locating...' : 'My Location'),
-                  style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                  label: Text(
+                    _isLoadingLocation ? 'Locating...' : 'My Location',
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                  ),
                 ),
                 Row(
                   children: [
@@ -2005,13 +2060,14 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       width: 140,
                       height: 44,
                       child: ElevatedButton(
-                        onPressed: _selectedLocation != null && !_isLoadingLocation
+                        onPressed:
+                            _selectedLocation != null && !_isLoadingLocation
                             ? () {
                                 Navigator.of(context).pop({
                                   'lat': _selectedLocation!.latitude,
                                   'lng': _selectedLocation!.longitude,
                                   'address': _selectedAddress, // 完整地址
-                                  'street': _selectedStreet,   // 街道名稱
+                                  'street': _selectedStreet, // 街道名稱
                                 });
                               }
                             : null,
@@ -2101,23 +2157,25 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                   ),
                 )
               : _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, size: 20),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {
-                          _searchResults = [];
-                          _showSearchResults = false;
-                        });
-                      },
-                    )
-                  : null,
+              ? IconButton(
+                  icon: Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchResults = [];
+                      _showSearchResults = false;
+                    });
+                  },
+                )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none,
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
         ),
         onChanged: _onSearchChanged,
       ),
@@ -2148,13 +2206,18 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             return InkWell(
               onTap: () => _selectSearchResult(r),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.location_on_outlined,
-                        color: AppColors.primary, size: 20),
+                    Icon(
+                      Icons.location_on_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -2163,7 +2226,9 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           Text(
                             street.isNotEmpty ? street : r.shortName,
                             style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w500),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -2171,7 +2236,9 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           Text(
                             r.displayName,
                             style: TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary),
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -2179,7 +2246,9 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           Text(
                             '${r.lat?.toStringAsFixed(6) ?? '--'}, ${r.lng?.toStringAsFixed(6) ?? '--'}',
                             style: TextStyle(
-                                fontSize: 11, color: AppColors.textSecondary),
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -2188,14 +2257,19 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           r.type,
-                          style: TextStyle(fontSize: 11, color: AppColors.primary),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -2233,7 +2307,7 @@ class CreateSchoolDialog extends StatefulWidget {
   final Function(SchoolRes) onSchoolCreated;
 
   const CreateSchoolDialog({Key? key, required this.onSchoolCreated})
-      : super(key: key);
+    : super(key: key);
 
   @override
   State<CreateSchoolDialog> createState() => _CreateSchoolDialogState();
@@ -2247,7 +2321,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   double? selectedLat;
   double? selectedLng;
   String? selectedAddress; // 完整地址
-  String? selectedStreet;  // 街道名（可選）
+  String? selectedStreet; // 街道名（可選）
 
   bool isSaving = false;
   String? errorMessage;
@@ -2255,10 +2329,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   Future<void> _openMapPicker() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => MapPickerDialog(
-        initialLat: selectedLat,
-        initialLng: selectedLng,
-      ),
+      builder: (context) =>
+          MapPickerDialog(initialLat: selectedLat, initialLng: selectedLng),
     );
 
     if (result != null) {
@@ -2271,7 +2343,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
         // 輸入框優先顯示街道，其次完整地址，最後顯示座標
         if (selectedStreet != null && selectedStreet!.trim().isNotEmpty) {
           _locationController.text = selectedStreet!;
-        } else if (selectedAddress != null && selectedAddress!.trim().isNotEmpty) {
+        } else if (selectedAddress != null &&
+            selectedAddress!.trim().isNotEmpty) {
           _locationController.text = selectedAddress!;
         } else if (selectedLat != null && selectedLng != null) {
           _locationController.text =
@@ -2347,7 +2420,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 ),
                 IconButton(
                   icon: Icon(Icons.close),
-                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -2431,8 +2506,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                       hintText: 'Search & select location on map',
                       filled: true,
                       fillColor: AppColors.inputBackground,
-                      prefixIcon:
-                          Icon(Icons.location_on, color: AppColors.textSecondary),
+                      prefixIcon: Icon(
+                        Icons.location_on,
+                        color: AppColors.textSecondary,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: AppColors.inputBorder),
@@ -2443,7 +2520,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
                     onTap: _openMapPicker,
@@ -2468,13 +2548,17 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ],
             ),
 
-            if (selectedAddress != null && selectedAddress!.trim().isNotEmpty) ...[
+            if (selectedAddress != null &&
+                selectedAddress!.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(
                   selectedAddress!,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2487,7 +2571,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(
                   'GPS: ${selectedLat!.toStringAsFixed(6)}, ${selectedLng!.toStringAsFixed(6)}',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -2501,7 +2588,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                   width: 100,
                   height: 44,
                   child: TextButton(
-                    onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: Text('Cancel'),
                   ),
                 ),
@@ -2523,12 +2612,15 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
-                        : Text('Create School',
-                            style: TextStyle(color: Colors.white)),
+                        : Text(
+                            'Create School',
+                            style: TextStyle(color: Colors.white),
+                          ),
                   ),
                 ),
               ],

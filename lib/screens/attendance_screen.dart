@@ -444,7 +444,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   String _formatClassDisplayName(CourseRes? course, String fallbackId) {
     if (course == null) return fallbackId;
 
-    final code = (course.courseCode ?? '').trim();
+    final code = course.courseCode.trim();
     final name = course.name.trim();
 
     if (code.isEmpty) return name.isNotEmpty ? name : fallbackId;

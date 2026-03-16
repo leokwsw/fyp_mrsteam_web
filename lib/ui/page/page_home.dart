@@ -55,8 +55,6 @@ class _HomePageState extends State<HomePage> {
             }
           },
           builder: (context, state) {
-            final bloc = context.read<HomeBloc>();
-
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
