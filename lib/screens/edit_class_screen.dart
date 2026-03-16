@@ -31,25 +31,6 @@ class EditClassScreen extends StatefulWidget {
   State<EditClassScreen> createState() => _EditClassScreenState();
 }
 
-/// 已上傳文件項目（統一模型：既用於已有文件也用於新上傳文件）
-class UploadedFileItem {
-  final String originalName;
-  final String path;
-  final String? url;
-  final int size;
-  final String mimetype;
-  final bool isExisting; // 標記是否為從服務端載入的已有文件
-
-  UploadedFileItem({
-    required this.originalName,
-    required this.path,
-    this.url,
-    required this.size,
-    required this.mimetype,
-    this.isExisting = false,
-  });
-}
-
 class _EditClassScreenState extends State<EditClassScreen> {
   final ApiProviderCourse _courseApi = getIt<ApiProviderCourse>();
   final ApiProviderFiles _filesApi = getIt<ApiProviderFiles>();
@@ -72,7 +53,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
   List<UserResponse> tutors = [];
 
   /// 統一的文件列表（包含已有文件和新上傳文件）
-  List<UploadedFileItem> uploadedFiles = [];
+  List<CourseFileReq> uploadedFiles = [];
 
   CourseRes? existingCourse;
 
@@ -227,10 +208,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
         // 直接使用後端 CourseFile 完整資料（url/path/originalName）
         uploadedFiles = courseRes.files.map((f) {
           final name = f.originalName.isNotEmpty ? f.originalName : f.filename;
-          return UploadedFileItem(
+          return CourseFileReq(
             originalName: name.isNotEmpty ? name : f.path.split('/').last,
+            filename: name.isNotEmpty ? name : f.path.split('/').last,
             path: f.path,
-            url: f.url.isNotEmpty ? f.url : null,
+            url: f.url.isNotEmpty ? f.url : '',
             size: 0,
             mimetype: _guessMimetype(name.isNotEmpty ? name : f.path),
             isExisting: true,
@@ -343,13 +325,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
           final response = await _filesApi.uploadFile(request);
 
           setState(() {
-            uploadedFiles.add(UploadedFileItem(
+            uploadedFiles.add(CourseFileReq(
               originalName: response.file.originalName,
+              filename: response.file.originalName,
               path: response.file.path,
               url: response.file.url,
               size: response.file.size.toInt(),
               mimetype: response.file.mimetype,
-              isExisting: false,
             ));
           });
 
@@ -464,10 +446,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
   }
 
   /// 預覽/下載文件
-  Future<void> _previewFile(UploadedFileItem file) async {
+  Future<void> _previewFile(CourseFileReq file) async {
     // A) 優先使用 file.url（你已驗證這個可下載）
-    if (file.url != null && file.url!.trim().isNotEmpty) {
-      html.window.open(file.url!, '_blank');
+    if (file.url.trim().isNotEmpty) {
+      html.window.open(file.url, '_blank');
       return;
     }
 
@@ -616,14 +598,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
         endDateTime!.millisecondsSinceEpoch,
       );
 
-      // 收集所有文件路徑（包括已有和新上傳的）
-      final filePaths = uploadedFiles.map((f) => f.path).toList();
-
       final request = UpdateCourseReq(
         name: _classNameController.text.trim(),
         overview: _overviewController.text.trim(),
         room: _roomController.text.trim(),
-        files: filePaths,
+        files: uploadedFiles,
         schoolId: selectedSchoolId!,
         tutorId: selectedTutorId!,
         timestamps: [timestamp],
@@ -1389,12 +1368,12 @@ class _EditClassScreenState extends State<EditClassScreen> {
 
               IconButton(
                 icon: Icon(
-                  file.url != null ? Icons.open_in_new : Icons.download,
+                  file.url.isNotEmpty ? Icons.open_in_new : Icons.download,
                   color: AppColors.primary,
                   size: 20,
                 ),
                 onPressed: () => _previewFile(file),
-                tooltip: file.url != null ? 'Open file' : 'Download file',
+                tooltip: file.url.isNotEmpty ? 'Open file' : 'Download file',
               ),
               IconButton(
                 icon: Icon(Icons.delete_outline, color: Colors.red, size: 20),
