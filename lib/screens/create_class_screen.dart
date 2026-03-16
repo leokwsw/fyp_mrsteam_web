@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -113,6 +114,18 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     }
   }
 
+  /// Build Content-Disposition headers for UTF-8/Chinese filename support (RFC 5987)
+  Map<String, List<String>> _utf8FilenameHeaders(String filename) {
+    final ext = path.extension(filename);
+    final fallback = 'file${ext.isEmpty ? '' : ext}';
+    final encoded = Uri.encodeComponent(filename);
+    return {
+      'Content-Disposition': [
+        'form-data; name="file"; filename="$fallback"; filename*=UTF-8\'\'$encoded',
+      ],
+    };
+  }
+
   /// 上傳文件
   Future<void> _uploadFiles() async {
     try {
@@ -143,17 +156,20 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
           MultipartFile multipartFile;
 
           // Web 平台使用 bytes，其他平台使用 path
+          final utf8Headers = _utf8FilenameHeaders(file.name);
           if (file.bytes != null) {
             // Web 平台
             multipartFile = MultipartFile.fromBytes(
               file.bytes!,
               filename: file.name,
+              headers: utf8Headers,
             );
           } else if (file.path != null) {
             // 桌面/移動平台
             multipartFile = await MultipartFile.fromFile(
               file.path!,
               filename: file.name,
+              headers: utf8Headers,
             );
           } else {
             continue; // 跳過無效文件
