@@ -11,6 +11,7 @@ import '../data/api/api_provider_users.dart';
 import '../data/model/response/res_course.dart';
 import '../data/model/response/res_school.dart';
 import '../data/model/response/res_user.dart';
+import '../widgets/class_details_dialog.dart';
 
 class ClassCalendarScreen extends StatefulWidget {
   const ClassCalendarScreen({Key? key}) : super(key: key);
@@ -63,11 +64,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
   DateTime _getHongKongTime() {
     final now = DateTime.now().toUtc();
-    return now.add(Duration(hours: 8));
+    return now.add(const Duration(hours: 8));
   }
 
   void _startTimeUpdate() {
-    Future.delayed(Duration(minutes: 1), () {
+    Future.delayed(const Duration(minutes: 1), () {
       if (mounted) {
         setState(() {
           currentDateTimeHK = _getHongKongTime();
@@ -75,6 +76,19 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         _startTimeUpdate();
       }
     });
+  }
+
+  Theme _buildDropdownTheme({required Widget child}) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        canvasColor: Colors.white,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: const Color(0xFFF5F5F5),
+        focusColor: Colors.transparent,
+      ),
+      child: child,
+    );
   }
 
   Future<void> _loadData() async {
@@ -113,6 +127,9 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
       }
 
       // Build lookup maps
+      schoolsMap.clear();
+      tutorsMap.clear();
+
       for (var school in schoolOptions) {
         if (school.id != null) {
           schoolsMap[school.id!] = school;
@@ -142,28 +159,29 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
     for (var course in allCourses) {
       // Apply filters
-      if (selectedCourseId != null && selectedCourseId != 'All' && course.id != selectedCourseId) {
+      if (selectedCourseId != null && course.id != selectedCourseId) {
         continue;
       }
-      if (selectedSchoolId != null && selectedSchoolId != 'All' && course.schoolId != selectedSchoolId) {
+      if (selectedSchoolId != null && course.schoolId != selectedSchoolId) {
         continue;
       }
-      if (selectedTutorId != null && selectedTutorId != 'All' && course.tutorId != selectedTutorId) {
+      if (selectedTutorId != null && course.tutorId != selectedTutorId) {
         continue;
       }
 
       // Process each timestamp
       for (var timestamp in course.timestamps) {
         // Parse as UTC and convert to Hong Kong time for consistent comparison
-        final startDateTimeUtc = DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt(), isUtc: true);
-        final endDateTimeUtc = DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt(), isUtc: true);
-        final startDateTime = startDateTimeUtc.add(Duration(hours: 8));
-        final endDateTime = endDateTimeUtc.add(Duration(hours: 8));
+        final startDateTimeUtc =
+            DateTime.fromMillisecondsSinceEpoch(timestamp.start.toInt(), isUtc: true);
+        final endDateTimeUtc =
+            DateTime.fromMillisecondsSinceEpoch(timestamp.end.toInt(), isUtc: true);
+        final startDateTime = startDateTimeUtc.add(const Duration(hours: 8));
+        final endDateTime = endDateTimeUtc.add(const Duration(hours: 8));
 
         // Check if this timestamp is in the selected month
         if (startDateTime.year == selectedMonth.year &&
             startDateTime.month == selectedMonth.month) {
-
           // Apply tab filter - use endDateTime for "Upcoming" to include ongoing classes
           final now = currentDateTimeHK;
           if (selectedTab == 'Upcoming' && endDateTime.isBefore(now)) continue;
@@ -178,23 +196,27 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           }
 
           // Apply status filter
-          if (selectedStatus != null && selectedStatus != 'All' && status != selectedStatus) {
+          if (selectedStatus != null && status != selectedStatus) {
             continue;
           }
 
           final school = schoolsMap[course.schoolId];
           final tutor = tutorsMap[course.tutorId];
 
+          final code = course.courseCode.trim();
+          final displayName = code.isNotEmpty ? '$code ${course.name.trim()}' : course.name.trim();
+
           final calendarClass = CalendarClass(
             courseId: course.id ?? '',
             schoolName: school?.name ?? 'Unknown School',
             time: '${_formatTime(startDateTime)} - ${_formatTime(endDateTime)}',
-            classCode: course.name,
+            classCode: displayName,
             color: status == 'Canceled' ? Colors.red : Colors.blue,
             tutor: tutor?.name ?? 'Unknown Tutor',
             status: status,
             room: course.room,
             notes: course.overview,
+            startAt: startDateTime,
           );
 
           final day = startDateTime.day;
@@ -202,6 +224,10 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           eventsMap[day]!.add(calendarClass);
         }
       }
+    }
+
+    for (final list in eventsMap.values) {
+      list.sort((a, b) => a.startAt.compareTo(b.startAt));
     }
 
     return eventsMap;
@@ -237,158 +263,16 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   void _showEventDetails(CalendarClass event) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Class Details',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildDetailRow('Class Name', event.classCode),
-              const SizedBox(height: 16),
-              _buildDetailRow('School', event.schoolName),
-              const SizedBox(height: 16),
-              _buildDetailRow('Time', event.time),
-              const SizedBox(height: 16),
-              _buildDetailRow('Tutor', event.tutor),
-              const SizedBox(height: 16),
-              _buildDetailRow('Room', event.room),
-              const SizedBox(height: 16),
-              _buildStatusRow('Status', event.status),
-              const SizedBox(height: 16),
-              _buildDetailRow('Overview', event.notes),
-              const SizedBox(height: 24),
-              
-              // Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 120,
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.cardBorder),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text('Close'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 120,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        context.push('/class/edit/${event.courseId}');
-                      },
-                      icon: Icon(Icons.edit, size: 18, color: Colors.white),
-                      label: Text('Edit', style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => ClassDetailsDialog(
+        courseId: event.courseId,
+        className: event.classCode,
+        schoolName: event.schoolName,
+        time: event.time,
+        tutorName: event.tutor,
+        room: event.room,
+        status: event.status,
+        overview: event.notes,
       ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Canceled':
-        return Color(0xFFB71C1C);
-      case 'Completed':
-        return Colors.green;
-      default:
-        return Color(0xFF1E3A5F);
-    }
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            '$label:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value.isNotEmpty ? value : '-',
-            style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusRow(String label, String status) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            '$label:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getStatusColor(status).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: _getStatusColor(status)),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: _getStatusColor(status),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -407,12 +291,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Class',
                     style: TextStyle(fontSize: 36, fontWeight: FontWeight.w600),
                   ),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.cardBackground,
                       borderRadius: BorderRadius.circular(8),
@@ -472,31 +356,32 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                     children: [
                       Text(
                         '${_getMonthName(selectedMonth.month)} ${selectedMonth.year}',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(width: 16),
                       IconButton(
-                        icon: Icon(Icons.chevron_left),
+                        icon: const Icon(Icons.chevron_left),
                         onPressed: _previousMonth,
                         tooltip: 'Previous Month',
                       ),
                       IconButton(
-                        icon: Icon(Icons.chevron_right),
+                        icon: const Icon(Icons.chevron_right),
                         onPressed: _nextMonth,
                         tooltip: 'Next Month',
                       ),
                       const SizedBox(width: 8),
                       TextButton.icon(
                         onPressed: _goToToday,
-                        icon: Icon(Icons.today, size: 18),
-                        label: Text('Today'),
+                        icon: const Icon(Icons.today, size: 18),
+                        label: const Text('Today'),
                         style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh),
                         onPressed: _loadData,
                         tooltip: 'Refresh',
                       ),
@@ -512,9 +397,9 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
               // Content
               if (isLoading)
-                Center(
+                const Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(40.0),
+                    padding: EdgeInsets.all(40.0),
                     child: CircularProgressIndicator(),
                   ),
                 )
@@ -524,13 +409,19 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                     padding: const EdgeInsets.all(40.0),
                     child: Column(
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
                         const SizedBox(height: 16),
-                        Text('Error loading classes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Error loading classes',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 8),
-                        Text(errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
+                        Text(
+                          errorMessage!,
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
                         const SizedBox(height: 16),
-                        ElevatedButton(onPressed: _loadData, child: Text('Retry')),
+                        ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
                       ],
                     ),
                   ),
@@ -618,6 +509,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   }
 
   Widget _buildCourseDropdown(double width) {
+    final validIds = courseOptions.map((c) => c.id).toSet();
+    final currentValue =
+        (selectedCourseId != null && validIds.contains(selectedCourseId))
+            ? selectedCourseId
+            : null;
+
     return SizedBox(
       width: width,
       child: Container(
@@ -628,23 +525,32 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: selectedCourseId,
-            hint: Text('All Classes', style: TextStyle(fontSize: 14)),
-            isExpanded: true,
-            icon: Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              DropdownMenuItem(value: null, child: Text('All Classes')),
-              ...courseOptions.map((course) => DropdownMenuItem(
-                value: course.id,
-                child: Text(
-                  course.name,
-                  style: TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              hint: const Text('All Classes', style: TextStyle(fontSize: 14)),
+              isExpanded: true,
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Classes'),
                 ),
-              )),
-            ],
-            onChanged: (value) => setState(() => selectedCourseId = value),
+                ...courseOptions.map(
+                  (course) => DropdownMenuItem<String?>(
+                    value: course.id,
+                    child: Text(
+                      course.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() => selectedCourseId = value),
+            ),
           ),
         ),
       ),
@@ -652,6 +558,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   }
 
   Widget _buildSchoolDropdown(double width) {
+    final validIds = schoolOptions.map((s) => s.id).toSet();
+    final currentValue =
+        (selectedSchoolId != null && validIds.contains(selectedSchoolId))
+            ? selectedSchoolId
+            : null;
+
     return SizedBox(
       width: width,
       child: Container(
@@ -662,23 +574,32 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: selectedSchoolId,
-            hint: Text('All Schools', style: TextStyle(fontSize: 14)),
-            isExpanded: true,
-            icon: Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              DropdownMenuItem(value: null, child: Text('All Schools')),
-              ...schoolOptions.map((school) => DropdownMenuItem(
-                value: school.id,
-                child: Text(
-                  school.name,
-                  style: TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              hint: const Text('All Schools', style: TextStyle(fontSize: 14)),
+              isExpanded: true,
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Schools'),
                 ),
-              )),
-            ],
-            onChanged: (value) => setState(() => selectedSchoolId = value),
+                ...schoolOptions.map(
+                  (school) => DropdownMenuItem<String?>(
+                    value: school.id,
+                    child: Text(
+                      school.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() => selectedSchoolId = value),
+            ),
           ),
         ),
       ),
@@ -686,6 +607,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   }
 
   Widget _buildTutorDropdown(double width) {
+    final validIds = tutorOptions.map((t) => t.id).toSet();
+    final currentValue =
+        (selectedTutorId != null && validIds.contains(selectedTutorId))
+            ? selectedTutorId
+            : null;
+
     return SizedBox(
       width: width,
       child: Container(
@@ -696,23 +623,32 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: selectedTutorId,
-            hint: Text('All Tutors', style: TextStyle(fontSize: 14)),
-            isExpanded: true,
-            icon: Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              DropdownMenuItem(value: null, child: Text('All Tutors')),
-              ...tutorOptions.map((tutor) => DropdownMenuItem(
-                value: tutor.id,
-                child: Text(
-                  tutor.name,
-                  style: TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              hint: const Text('All Tutors', style: TextStyle(fontSize: 14)),
+              isExpanded: true,
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Tutors'),
                 ),
-              )),
-            ],
-            onChanged: (value) => setState(() => selectedTutorId = value),
+                ...tutorOptions.map(
+                  (tutor) => DropdownMenuItem<String?>(
+                    value: tutor.id,
+                    child: Text(
+                      tutor.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() => selectedTutorId = value),
+            ),
           ),
         ),
       ),
@@ -720,6 +656,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
   }
 
   Widget _buildStatusDropdown(double width) {
+    const validStatuses = {'Scheduled', 'Completed', 'Canceled'};
+    final currentValue =
+        (selectedStatus != null && validStatuses.contains(selectedStatus))
+            ? selectedStatus
+            : null;
+
     return SizedBox(
       width: width,
       child: Container(
@@ -730,18 +672,34 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: selectedStatus,
-            hint: Text('All Status', style: TextStyle(fontSize: 14)),
-            isExpanded: true,
-            icon: Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              DropdownMenuItem(value: null, child: Text('All Status')),
-              DropdownMenuItem(value: 'Scheduled', child: Text('Scheduled')),
-              DropdownMenuItem(value: 'Completed', child: Text('Completed')),
-              DropdownMenuItem(value: 'Canceled', child: Text('Canceled')),
-            ],
-            onChanged: (value) => setState(() => selectedStatus = value),
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              hint: const Text('All Status', style: TextStyle(fontSize: 14)),
+              isExpanded: true,
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: const [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Status'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Scheduled',
+                  child: Text('Scheduled'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Completed',
+                  child: Text('Completed'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Canceled',
+                  child: Text('Canceled'),
+                ),
+              ],
+              onChanged: (value) => setState(() => selectedStatus = value),
+            ),
           ),
         ),
       ),
@@ -855,7 +813,12 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid(int daysInMonth, int startWeekday, int prevMonthLastDay, int prevMonthDaysToShow) {
+  Widget _buildCalendarGrid(
+    int daysInMonth,
+    int startWeekday,
+    int prevMonthLastDay,
+    int prevMonthDaysToShow,
+  ) {
     List<Widget> weeks = [];
     int currentDay = 1;
     int nextMonthDay = 1;
@@ -891,12 +854,17 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
     return Column(children: weeks);
   }
 
-  Widget _buildCalendarCell(int day, bool isOtherMonth, List<CalendarClass> events, {bool isToday = false}) {
+  Widget _buildCalendarCell(
+    int day,
+    bool isOtherMonth,
+    List<CalendarClass> events, {
+    bool isToday = false,
+  }) {
     return Expanded(
       child: Container(
         height: 140,
         decoration: BoxDecoration(
-          color: isToday ? Color(0xFFD6E4F5) : Colors.white,
+          color: isToday ? const Color(0xFFD6E4F5) : Colors.white,
           border: Border.all(color: AppColors.cardBorder.withOpacity(0.5)),
         ),
         child: Stack(
@@ -933,24 +901,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
                 right: 4,
                 bottom: 4,
                 child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ...events.take(3).map((event) => _buildEventCard(event)),
-                      if (events.length > 3)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            '+${events.length - 3} more',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                    ],
+                    children: events.map((event) => _buildEventCard(event)).toList(),
                   ),
                 ),
               ),
@@ -969,8 +924,8 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: event.status == 'Canceled'
-              ? Color(0xFFB71C1C)
-              : Color.fromARGB(255, 37, 120, 228),
+              ? const Color(0xFFB71C1C)
+              : const Color.fromARGB(255, 37, 120, 228),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Column(
@@ -979,7 +934,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
           children: [
             Text(
               event.classCode,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -991,7 +946,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
             const SizedBox(height: 2),
             Text(
               event.time,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10,
                 color: Colors.white,
                 height: 1.1,
@@ -1024,6 +979,7 @@ class CalendarClass {
   final String status;
   final String room;
   final String notes;
+  final DateTime startAt;
 
   CalendarClass({
     required this.courseId,
@@ -1035,5 +991,6 @@ class CalendarClass {
     required this.status,
     required this.room,
     required this.notes,
+    required this.startAt,
   });
 }

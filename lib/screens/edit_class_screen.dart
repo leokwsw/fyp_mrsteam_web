@@ -275,6 +275,113 @@ class _EditClassScreenState extends State<EditClassScreen> {
     };
   }
 
+  /// ✅ 日期/時間選擇器主題（白底 + 去紫 + disabled 灰色 + selected 描邊）
+  ThemeData _whitePickerThemeAutoPrimary(BuildContext context) {
+    final base = Theme.of(context);
+
+    final primary = AppColors.primary;
+    final surface = Colors.white;
+    final onSurface = Colors.black87;
+    final disabled = Colors.grey.shade400;
+
+    final scheme = base.colorScheme.copyWith(
+      brightness: Brightness.light,
+      primary: primary,
+      onPrimary: Colors.white,
+      surface: surface,
+      onSurface: onSurface,
+      onSurfaceVariant: Colors.grey.shade700,
+      tertiary: primary,
+    );
+
+    return base.copyWith(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: surface,
+      canvasColor: surface,
+      dialogBackgroundColor: surface,
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: primary),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.black26,
+
+        // 頂部白底，避免紫色
+        headerBackgroundColor: surface,
+        headerForegroundColor: onSurface,
+
+        weekdayStyle: TextStyle(color: Colors.grey.shade700),
+
+        // 日期文字
+        dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return disabled;
+          return onSurface;
+        }),
+
+        // 日期底色保持透明（不出現實心藍/紫圓）
+        dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          return Colors.transparent;
+        }),
+
+        // 選中日期改成描邊
+        dayShape: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return CircleBorder(
+              side: BorderSide(color: primary, width: 1.6),
+            );
+          }
+          return const CircleBorder();
+        }),
+
+        // today 與 selected 疊加時也保持可讀
+        todayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return disabled;
+          return onSurface;
+        }),
+        todayBorder: BorderSide(color: primary, width: 1.2),
+
+        // 年份頁
+        yearForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return disabled;
+          if (states.contains(WidgetState.selected)) return Colors.white;
+          return onSurface;
+        }),
+        yearBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return primary;
+          return Colors.transparent;
+        }),
+
+        dividerColor: Colors.grey.shade200,
+        rangeSelectionBackgroundColor: primary.withOpacity(0.12),
+        cancelButtonStyle: TextButton.styleFrom(foregroundColor: primary),
+        confirmButtonStyle: TextButton.styleFrom(foregroundColor: primary),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: surface,
+        dialBackgroundColor: Colors.grey.shade100,
+        hourMinuteColor: Colors.grey.shade100,
+        hourMinuteTextColor: onSurface,
+        dayPeriodColor: Colors.grey.shade100,
+        dayPeriodTextColor: onSurface,
+        dialHandColor: primary,
+        dialTextColor: onSurface,
+        entryModeIconColor: primary,
+        helpTextStyle: TextStyle(color: onSurface),
+        cancelButtonStyle: TextButton.styleFrom(foregroundColor: primary),
+        confirmButtonStyle: TextButton.styleFrom(foregroundColor: primary),
+      ),
+    );
+  }
+
+  DateTime _clampDate(DateTime input, DateTime min, DateTime max) {
+    if (input.isBefore(min)) return min;
+    if (input.isAfter(max)) return max;
+    return input;
+  }
+
   /// 上傳新文件
   Future<void> _uploadFiles() async {
     try {
@@ -810,7 +917,6 @@ class _EditClassScreenState extends State<EditClassScreen> {
                   ),
                   const SizedBox(height: 24),
 
-
                   // Start Date and Time
                   _buildDateTimeField(
                       'Start Date and Time *', _startTimeController, (dt) {
@@ -1018,7 +1124,6 @@ class _EditClassScreenState extends State<EditClassScreen> {
           ],
         ),
         const SizedBox(height: 8),
-
         Container(
           decoration: BoxDecoration(
             border: Border.all(
@@ -1036,7 +1141,6 @@ class _EditClassScreenState extends State<EditClassScreen> {
                       ? _buildEmptyFilesState()
                       : _buildFilesList(),
         ),
-
         if (uploadedFiles.isNotEmpty && !isUploading && !isLoadingFiles) ...[
           const SizedBox(height: 12),
           Row(
@@ -1275,7 +1379,6 @@ class _EditClassScreenState extends State<EditClassScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1365,7 +1468,6 @@ class _EditClassScreenState extends State<EditClassScreen> {
                   ],
                 ),
               ),
-
               IconButton(
                 icon: Icon(
                   file.url.isNotEmpty ? Icons.open_in_new : Icons.download,
@@ -1387,8 +1489,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
     );
   }
 
-  Widget _buildDateTimeField(String label, TextEditingController controller,
-      Function(DateTime) onSelected) {
+  Widget _buildDateTimeField(
+    String label,
+    TextEditingController controller,
+    Function(DateTime) onSelected,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1424,7 +1529,11 @@ class _EditClassScreenState extends State<EditClassScreen> {
             ),
           ),
           onTap: () async {
+            FocusScope.of(context).unfocus();
+
             final now = DateTime.now();
+            final firstDate = DateTime(2000, 1, 1);
+            final lastDate = DateTime(2100, 12, 31);
 
             // 編輯頁允許載入和選擇歷史日期
             DateTime initialDate = now;
@@ -1433,26 +1542,46 @@ class _EditClassScreenState extends State<EditClassScreen> {
             } else if (label.contains('End') && endDateTime != null) {
               initialDate = endDateTime!;
             }
+            initialDate = _clampDate(initialDate, firstDate, lastDate);
+
+            final pickerTheme = _whitePickerThemeAutoPrimary(context);
 
             DateTime? date = await showDatePicker(
               context: context,
               initialDate: initialDate,
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
+              firstDate: firstDate,
+              lastDate: lastDate,
+              builder: (context, child) {
+                return Theme(
+                  data: pickerTheme,
+                  child: child!,
+                );
+              },
             );
+
             if (date != null) {
               TimeOfDay initialTime = TimeOfDay.now();
               if (label.contains('Start') && startDateTime != null) {
                 initialTime = TimeOfDay(
-                    hour: startDateTime!.hour, minute: startDateTime!.minute);
+                  hour: startDateTime!.hour,
+                  minute: startDateTime!.minute,
+                );
               } else if (label.contains('End') && endDateTime != null) {
                 initialTime = TimeOfDay(
-                    hour: endDateTime!.hour, minute: endDateTime!.minute);
+                  hour: endDateTime!.hour,
+                  minute: endDateTime!.minute,
+                );
               }
 
               TimeOfDay? time = await showTimePicker(
                 context: context,
                 initialTime: initialTime,
+                builder: (context, child) {
+                  return Theme(
+                    data: pickerTheme,
+                    child: child!,
+                  );
+                },
               );
 
               if (time != null) {
@@ -1511,6 +1640,8 @@ class _EditClassScreenState extends State<EditClassScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: selectedSchoolId,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
               hint: Text('Select School',
                   style: TextStyle(color: AppColors.textSecondary)),
               isExpanded: true,
@@ -1578,6 +1709,8 @@ class _EditClassScreenState extends State<EditClassScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: selectedTutorId,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
               hint: Text('Select Tutor',
                   style: TextStyle(color: AppColors.textSecondary)),
               isExpanded: true,
@@ -1698,7 +1831,6 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ],
             ),
             const SizedBox(height: 24),
-
             if (errorMessage != null) ...[
               Container(
                 width: double.infinity,
@@ -1723,7 +1855,6 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ),
               const SizedBox(height: 16),
             ],
-
             Text('School Name *',
                 style: TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w500)),
@@ -1743,7 +1874,6 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ),
             ),
             const SizedBox(height: 24),
-
             Text('GPS Location (Optional)',
                 style: TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w500)),
@@ -1792,7 +1922,6 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               ],
             ),
             const SizedBox(height: 32),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [

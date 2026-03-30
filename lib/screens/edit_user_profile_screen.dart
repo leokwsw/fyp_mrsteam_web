@@ -269,6 +269,15 @@ class _EditUserProfileScreenState extends State<EditUserProfileScreen> {
     }
   }
 
+  String? _getPasswordError(String value) {
+    if (value.length < 8) return 'Password must be at least 8 characters';
+    if (!value.contains(RegExp(r'[A-Z]'))) return 'Password must contain at least one uppercase letter';
+    if (!value.contains(RegExp(r'[a-z]'))) return 'Password must contain at least one lowercase letter';
+    if (!value.contains(RegExp(r'[0-9]'))) return 'Password must contain at least one number';
+    if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return 'Password must contain at least one special character';
+    return null;
+  }
+
   String _capitalizeFirst(String? text) {
     if (text == null || text.isEmpty) return '-';
     return text[0].toUpperCase() + text.substring(1).toLowerCase();
@@ -596,8 +605,8 @@ class _EditUserProfileScreenState extends State<EditUserProfileScreen> {
                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
                           validator: (value) {
-                            if (showPasswordFields && value != null && value.isNotEmpty && value.length < 6) {
-                              return 'Password must be at least 6 characters';
+                            if (showPasswordFields && value != null && value.isNotEmpty) {
+                              return _getPasswordError(value);
                             }
                             return null;
                           },
@@ -656,7 +665,7 @@ class _EditUserProfileScreenState extends State<EditUserProfileScreen> {
                   children: [
                     // Delete Button
                     SizedBox(
-                      width: 140,
+                      width: 160,
                       height: 48,
                       child: OutlinedButton.icon(
                         onPressed: isDeleting ? null : _showDeleteConfirmation,
