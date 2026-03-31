@@ -61,6 +61,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     _loadData();
   }
 
+  Theme _buildDropdownTheme({required Widget child}) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        canvasColor: Colors.white, // dropdown popup background
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent, // remove default purple press highlight
+        hoverColor: const Color(0xFFF5F5F5), // subtle hover
+        focusColor: Colors.transparent,
+      ),
+      child: child,
+    );
+  }
+
   Future<void> _loadData() async {
     setState(() {
       isLoading = true;
@@ -162,6 +175,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return showDialog<ExportFormat>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Export Format'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -398,7 +412,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       case 'Present':
         return StatusType.success;
       case 'Absent':
-        return StatusType.error;
       case 'Late':
         return StatusType.error;
       default:
@@ -414,7 +427,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final timeFormat = DateFormat('HH:mm');
 
       return '${dateFormat.format(start)}\n${timeFormat.format(start)} - ${timeFormat.format(end)}';
-    } catch (e) {
+    } catch (_) {
       return '-';
     }
   }
@@ -463,9 +476,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Tutor Attendance Records',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w600,
                 ),
@@ -497,7 +510,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: AppColors.primary, width: 2),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 ),
               ),
               const SizedBox(height: 24),
@@ -541,7 +555,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
-                        Text(errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
+                        Text(
+                          errorMessage!,
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
                         const SizedBox(height: 16),
                         ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
                       ],
@@ -580,7 +597,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
@@ -603,8 +621,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildTutorDropdown() {
     final validTutorIds = tutorOptions.map((t) => t.id).toSet();
-    final currentValue =
-        (selectedTutorId != null && validTutorIds.contains(selectedTutorId)) ? selectedTutorId : null;
+    final currentValue = (selectedTutorId != null &&
+            validTutorIds.contains(selectedTutorId))
+        ? selectedTutorId
+        : null;
 
     return SizedBox(
       width: 180,
@@ -616,28 +636,35 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: currentValue,
-            isExpanded: true,
-            hint: const Text('All Tutors', style: TextStyle(fontSize: 14)),
-            icon: const Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              const DropdownMenuItem<String>(value: null, child: Text('All Tutors')),
-              ...tutorOptions.map(
-                (tutor) => DropdownMenuItem<String>(
-                  value: tutor.id,
-                  child: Text(
-                    tutor.name,
-                    style: const TextStyle(fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              isExpanded: true,
+              hint: const Text('All Tutors', style: TextStyle(fontSize: 14)),
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Tutors'),
+                ),
+                ...tutorOptions.map(
+                  (tutor) => DropdownMenuItem<String?>(
+                    value: tutor.id,
+                    child: Text(
+                      tutor.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() => selectedTutorId = value);
-              _loadAttendances();
-            },
+              ],
+              onChanged: (value) {
+                setState(() => selectedTutorId = value);
+                _loadAttendances();
+              },
+            ),
           ),
         ),
       ),
@@ -646,8 +673,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildCourseDropdown() {
     final validCourseIds = courseOptions.map((c) => c.id).toSet();
-    final currentValue =
-        (selectedCourseId != null && validCourseIds.contains(selectedCourseId)) ? selectedCourseId : null;
+    final currentValue = (selectedCourseId != null &&
+            validCourseIds.contains(selectedCourseId))
+        ? selectedCourseId
+        : null;
 
     return SizedBox(
       width: 180,
@@ -659,28 +688,35 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: currentValue,
-            isExpanded: true,
-            hint: const Text('All Classes', style: TextStyle(fontSize: 14)),
-            icon: const Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              const DropdownMenuItem<String>(value: null, child: Text('All Classes')),
-              ...courseOptions.map(
-                (course) => DropdownMenuItem<String>(
-                  value: course.id,
-                  child: Text(
-                    course.name,
-                    style: const TextStyle(fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              isExpanded: true,
+              hint: const Text('All Classes', style: TextStyle(fontSize: 14)),
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Classes'),
+                ),
+                ...courseOptions.map(
+                  (course) => DropdownMenuItem<String?>(
+                    value: course.id,
+                    child: Text(
+                      course.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() => selectedCourseId = value);
-              _loadAttendances();
-            },
+              ],
+              onChanged: (value) {
+                setState(() => selectedCourseId = value);
+                _loadAttendances();
+              },
+            ),
           ),
         ),
       ),
@@ -689,8 +725,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildSchoolDropdown() {
     final validSchoolIds = schoolOptions.map((s) => s.id).toSet();
-    final currentValue =
-        (selectedSchoolId != null && validSchoolIds.contains(selectedSchoolId)) ? selectedSchoolId : null;
+    final currentValue = (selectedSchoolId != null &&
+            validSchoolIds.contains(selectedSchoolId))
+        ? selectedSchoolId
+        : null;
 
     return SizedBox(
       width: 180,
@@ -702,52 +740,63 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: currentValue,
-            isExpanded: true,
-            hint: const Text('All Schools', style: TextStyle(fontSize: 14)),
-            icon: const Icon(Icons.arrow_drop_down, size: 20),
-            items: [
-              const DropdownMenuItem<String>(value: null, child: Text('All Schools')),
-              DropdownMenuItem<String>(
-                value: '__create_new__',
-                child: Row(
-                  children: [
-                    Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Create New School',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              isExpanded: true,
+              hint: const Text('All Schools', style: TextStyle(fontSize: 14)),
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Schools'),
                 ),
-              ),
-              ...schoolOptions.map(
-                (school) => DropdownMenuItem<String>(
-                  value: school.id,
-                  child: Text(
-                    school.name,
-                    style: const TextStyle(fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
+                DropdownMenuItem<String?>(
+                  value: '__create_new__',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Create New School',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-            onChanged: (value) {
-              if (value == '__create_new__') {
-                _showCreateSchoolDialog();
-              } else {
-                setState(() => selectedSchoolId = value);
-                _loadAttendances();
-              }
-            },
+                ...schoolOptions.map(
+                  (school) => DropdownMenuItem<String?>(
+                    value: school.id,
+                    child: Text(
+                      school.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == '__create_new__') {
+                  _showCreateSchoolDialog();
+                } else {
+                  setState(() => selectedSchoolId = value);
+                  _loadAttendances();
+                }
+              },
+            ),
           ),
         ),
       ),
@@ -757,7 +806,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget _buildStatusDropdown() {
     final validStatuses = {'Present', 'Absent', 'Late'};
     final currentValue =
-        (selectedStatus != null && validStatuses.contains(selectedStatus)) ? selectedStatus : null;
+        (selectedStatus != null && validStatuses.contains(selectedStatus))
+            ? selectedStatus
+            : null;
 
     return SizedBox(
       width: 180,
@@ -769,20 +820,36 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           border: Border.all(color: AppColors.inputBorder),
         ),
         child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: currentValue,
-            isExpanded: true,
-            hint: const Text('All Status', style: TextStyle(fontSize: 14)),
-            icon: const Icon(Icons.arrow_drop_down, size: 20),
-            items: const [
-              DropdownMenuItem<String>(value: null, child: Text('All Status')),
-              DropdownMenuItem<String>(value: 'Present', child: Text('Present')),
-              DropdownMenuItem<String>(value: 'Absent', child: Text('Absent')),
-              DropdownMenuItem<String>(value: 'Late', child: Text('Late')),
-            ],
-            onChanged: (value) {
-              setState(() => selectedStatus = value);
-            },
+          child: _buildDropdownTheme(
+            child: DropdownButton<String?>(
+              value: currentValue,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              isExpanded: true,
+              hint: const Text('All Status', style: TextStyle(fontSize: 14)),
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: const [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All Status'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Present',
+                  child: Text('Present'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Absent',
+                  child: Text('Absent'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Late',
+                  child: Text('Late'),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() => selectedStatus = value);
+              },
+            ),
           ),
         ),
       ),
@@ -857,7 +924,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5))),
+        border:
+            Border(bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5))),
       ),
       child: Row(
         children: [
@@ -934,7 +1002,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 class CreateSchoolDialog extends StatefulWidget {
   final Function(SchoolRes) onSchoolCreated;
 
-  const CreateSchoolDialog({Key? key, required this.onSchoolCreated}) : super(key: key);
+  const CreateSchoolDialog({Key? key, required this.onSchoolCreated})
+      : super(key: key);
 
   @override
   State<CreateSchoolDialog> createState() => _CreateSchoolDialogState();
@@ -1098,7 +1167,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _latController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: 'Latitude',
                       filled: true,
@@ -1122,7 +1192,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _longController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: 'Longitude',
                       filled: true,
@@ -1169,7 +1240,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text('Cancel', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1192,10 +1266,15 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text('Create', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        : const Text(
+                            'Create',
+                            style:
+                                TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
                   ),
                 ),
               ],
