@@ -40,12 +40,23 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
   }
 
   void _generatePassword() {
-    // Generate random password
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digits = '0123456789';
+    const special = '!@#\$%^&*(),.?":{}|<>';
+    const all = lower + upper + digits + special;
     final random = Random();
-    generatedPassword = String.fromCharCodes(
-      Iterable.generate(8, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
-    );
+
+    // Guarantee at least one character from each required group
+    final chars = [
+      lower[random.nextInt(lower.length)],
+      upper[random.nextInt(upper.length)],
+      digits[random.nextInt(digits.length)],
+      special[random.nextInt(special.length)],
+      ...List.generate(4, (_) => all[random.nextInt(all.length)]),
+    ]..shuffle(random);
+
+    generatedPassword = chars.join();
   }
 
   void _copyToClipboard(String text, String label) {
@@ -400,6 +411,8 @@ class _AddNewUserScreenState extends State<AddNewUserScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
+              dropdownColor: Colors.white, 
+              borderRadius: BorderRadius.circular(8),
               hint: Text('Select ${label.replaceAll(' *', '')}'),
               isExpanded: true,
               icon: Icon(Icons.unfold_more, color: AppColors.textSecondary),

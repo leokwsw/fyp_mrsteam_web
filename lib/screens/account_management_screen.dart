@@ -198,38 +198,53 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
+  Theme _buildDropdownTheme({required Widget child}) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        canvasColor: Colors.white,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: const Color(0xFFF5F5F5),
+        focusColor: Colors.transparent,
+      ),
+      child: child,
+    );
+  }
+
   Widget _buildFilterDropdown(
     String label,
     String? value,
     List<String> items,
     Function(String?) onChanged,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          hint: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label, style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_drop_down, size: 20),
-            ],
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: _buildDropdownTheme(
+            child: DropdownButton<String>(
+              value: value,
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              hint: Text(label, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+              isExpanded: true,
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              items: items
+                  .map((item) => DropdownMenuItem(
+                        value: item,
+                        child: Text(item, style: const TextStyle(fontSize: 14)),
+                      ))
+                  .toList(),
+              onChanged: onChanged,
+            ),
           ),
-          icon: Container(),
-          items: items
-              .map((item) => DropdownMenuItem(
-                    value: item,
-                    child: Text(item, style: TextStyle(fontSize: 14)),
-                  ))
-              .toList(),
-          onChanged: onChanged,
         ),
       ),
     );

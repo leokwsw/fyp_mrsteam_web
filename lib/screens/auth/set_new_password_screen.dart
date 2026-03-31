@@ -25,12 +25,13 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  bool _isValidPassword(String password) {
-    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-    return password.length >= 8 &&
-        password.contains(RegExp(r'[A-Z]')) &&
-        password.contains(RegExp(r'[a-z]')) &&
-        password.contains(RegExp(r'[0-9]'));
+  String? _getPasswordError(String password) {
+    if (password.length < 8) return 'Password must be at least 8 characters';
+    if (!password.contains(RegExp(r'[A-Z]'))) return 'Password must contain at least one uppercase letter';
+    if (!password.contains(RegExp(r'[a-z]'))) return 'Password must contain at least one lowercase letter';
+    if (!password.contains(RegExp(r'[0-9]'))) return 'Password must contain at least one number';
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return 'Password must contain at least one special character';
+    return null;
   }
 
   Future<void> _handleSetPassword() async {
@@ -45,9 +46,10 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
       return;
     }
 
-    if (!_isValidPassword(newPassword)) {
+    final pwError = _getPasswordError(newPassword);
+    if (pwError != null) {
       setState(() {
-        _errorMessage = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+        _errorMessage = pwError;
       });
       return;
     }
@@ -203,7 +205,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '• At least 8 characters\n• One uppercase letter\n• One lowercase letter\n• One number',
+                                '• At least 8 characters\n• One uppercase letter\n• One lowercase letter\n• One number\n• One special character (!@#\$%^&*...)',
                                 style: TextStyle(
                                   color: Colors.blue.shade700,
                                   fontSize: 12,
