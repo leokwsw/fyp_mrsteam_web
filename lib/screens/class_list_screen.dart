@@ -546,7 +546,9 @@ class _ClassListScreenState extends State<ClassListScreen> {
                   (course) => DropdownMenuItem<String?>(
                     value: course.id,
                     child: Text(
-                      course.name,
+                      course.courseCode.trim().isNotEmpty
+                          ? '${course.courseCode.trim()} ${course.name.trim()}'
+                          : course.name.trim(),
                       style: const TextStyle(fontSize: 14),
                       overflow: TextOverflow.ellipsis,
                     ),
