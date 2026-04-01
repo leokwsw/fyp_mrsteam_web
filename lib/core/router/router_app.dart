@@ -15,6 +15,7 @@ import 'package:fyp_mrsteam_web/screens/add_new_user_screen.dart';
 import 'package:fyp_mrsteam_web/screens/user_profile_screen.dart';
 import 'package:fyp_mrsteam_web/screens/my_profile_screen.dart';
 import 'package:fyp_mrsteam_web/screens/change_password_screen.dart';
+import 'package:fyp_mrsteam_web/screens/school_screen.dart';
 import 'package:fyp_mrsteam_web/ui/page/page_home.dart';
 import 'package:go_router/go_router.dart';
 
@@ -107,6 +108,12 @@ class AppRouter {
             final userId = state.pathParameters['userId'] ?? '';
             return UserProfileScreen(userId: userId);
           },
+        ),
+        // School Routes
+        GoRoute(
+          path: '/school',
+          name: 'school',
+          builder: (context, state) => const SchoolScreen(),
         ),
         //leave routes
         GoRoute(

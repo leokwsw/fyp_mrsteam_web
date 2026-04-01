@@ -9,6 +9,8 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController? controller;
   final int? maxLength;
   final TextInputType? keyboardType;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? textInputAction;
 
   const CustomTextField({
     Key? key,
@@ -18,6 +20,8 @@ class CustomTextField extends StatelessWidget {
     this.controller,
     this.maxLength,
     this.keyboardType,
+    this.onSubmitted,
+    this.textInputAction,
   }) : super(key: key);
 
   @override
@@ -33,6 +37,8 @@ class CustomTextField extends StatelessWidget {
           style: AppTextStyles.inputText,
           maxLength: maxLength,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
           textCapitalization: maxLength == 4 ? TextCapitalization.characters : TextCapitalization.none,
           decoration: InputDecoration(
             hintText: placeholder,

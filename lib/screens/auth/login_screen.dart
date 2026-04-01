@@ -171,6 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: 'User ID',
                           placeholder: 'Enter your User ID',
                           controller: _userIdController,
+                          textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 24),
 
@@ -180,6 +181,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           placeholder: 'Enter your Password',
                           isPassword: true,
                           controller: _passwordController,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => isLoading ? null : _handleLogin(),
                         ),
                         const SizedBox(height: 32),
 

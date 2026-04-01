@@ -264,7 +264,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final stats = dashboardStats!;
     final courseStats = stats.course.summary;
-    final userStats = stats.users;
     final attendanceFromFiltered = attendanceStatsFromFiltered;
 
     return Scaffold(
@@ -353,7 +352,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Total Tutors',
-                      value: userStats.totalTutors.toString(),
+                      value: todayClasses
+                          .map((c) => c.tutorId)
+                          .where((id) => id.isNotEmpty)
+                          .toSet()
+                          .length
+                          .toString(),
                     ),
                   ),
                   const SizedBox(width: 16),

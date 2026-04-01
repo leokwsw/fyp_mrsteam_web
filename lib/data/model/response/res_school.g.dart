@@ -20,6 +20,7 @@ SchoolRes _$SchoolResFromJson(Map<String, dynamic> json) => SchoolRes(
       ? null
       : SchoolGpsRes.fromJson(json['gps'] as Map<String, dynamic>),
   id: json['_id'] as String?,
+  address: json['address'] as String?,
   isDeleted: json['isDeleted'] as bool?,
   createdAt: json['createdAt'] as String?,
   updatedAt: json['updatedAt'] as String?,
@@ -29,6 +30,7 @@ Map<String, dynamic> _$SchoolResToJson(SchoolRes instance) => <String, dynamic>{
   '_id': instance.id,
   'name': instance.name,
   'gps': instance.gps,
+  'address': instance.address,
   'isDeleted': instance.isDeleted,
   'createdAt': instance.createdAt,
   'updatedAt': instance.updatedAt,
