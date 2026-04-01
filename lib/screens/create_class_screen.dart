@@ -134,11 +134,9 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     _loadData();
   }
 
-  /// 白底 + 自动取当前应用主色（无论全局深浅主题，这里都强制浅色弹窗）
   ThemeData _whitePickerThemeAutoPrimary(BuildContext context) {
   final base = Theme.of(context);
 
-  // 你自己的主色（用于按钮、描边、指针等）
   final primary = AppColors.primary;
 
   final surface = Colors.white;
@@ -172,25 +170,20 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.black26,
 
-      // 顶部也改白色，彻底去掉紫色头部
       headerBackgroundColor: surface,
       headerForegroundColor: onSurface,
 
       weekdayStyle: TextStyle(color: Colors.grey.shade700),
 
-      // 日期数字：禁用灰色，其余黑色（包含 selected）
       dayForegroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return disabled;
         return onSurface;
       }),
-
-      // 日期底色：选中时白底（覆盖默认蓝色填充），其余透明
       dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) return Colors.white;
         return Colors.transparent;
       }),
 
-      // 选中日期：仅描边，不填充
       dayShape: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
           return CircleBorder(
@@ -200,14 +193,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         return const CircleBorder();
       }),
 
-      // 今天未选中时描边；若今天=选中，沿用 selected 的 dayShape
       todayForegroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return disabled;
         return onSurface;
       }),
       todayBorder: BorderSide(color: primary, width: 1.2),
 
-      // 年份页：禁用灰色；选中用主色底+白字
       yearForegroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return disabled;
         if (states.contains(WidgetState.selected)) return Colors.white;
@@ -1883,6 +1874,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: Colors.white,
       child: Container(
         width: 700,
         height: 650,
@@ -2406,6 +2398,7 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: Colors.white,
       child: Container(
         width: 500,
         padding: const EdgeInsets.all(24),

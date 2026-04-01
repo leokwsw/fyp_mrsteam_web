@@ -54,6 +54,12 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
               ),
               const SizedBox(width: 40),
               _NavLink(
+                text: 'School',
+                isActive: currentRoute.contains('/school'),
+                onTap: () => context.go('/school'),
+              ),
+              const SizedBox(width: 40),
+              _NavLink(
                 text: 'Attendance',
                 isActive: currentRoute == '/attendance',
                 onTap: () => context.go('/attendance'),

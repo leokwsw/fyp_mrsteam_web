@@ -25,6 +25,7 @@ class SchoolRes {
   final String? id;
   final String name;
   final SchoolGpsRes? gps;
+  final String? address;
   final bool? isDeleted;
   final String? createdAt;
   final String? updatedAt;
@@ -33,6 +34,7 @@ class SchoolRes {
     this.name,
     this.gps, {
     this.id,
+    this.address,
     this.isDeleted,
     this.createdAt,
     this.updatedAt,
