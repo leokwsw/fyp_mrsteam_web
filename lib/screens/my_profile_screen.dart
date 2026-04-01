@@ -53,6 +53,7 @@ Future<void> _logout() async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text('Logout'),
       content: Text('Are you sure you want to logout?'),

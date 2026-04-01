@@ -705,7 +705,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   (course) => DropdownMenuItem<String?>(
                     value: course.id,
                     child: Text(
-                      course.name,
+                      course.courseCode.trim().isNotEmpty
+                          ? '${course.courseCode.trim()} ${course.name.trim()}'
+                          : course.name,
                       style: const TextStyle(fontSize: 14),
                       overflow: TextOverflow.ellipsis,
                     ),

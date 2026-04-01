@@ -680,6 +680,10 @@ class _EditClassScreenState extends State<EditClassScreen> {
       _showError('Please enter class name');
       return;
     }
+    if (_roomController.text.trim().isEmpty) {
+      _showError('Please enter room');
+      return;
+    }
     if (selectedSchoolId == null) {
       _showError('Please select a school');
       return;
@@ -937,7 +941,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
 
                   // Room
                   CustomTextField(
-                    label: 'Room',
+                    label: 'Room *',
                     placeholder: 'e.g., Room 301',
                     controller: _roomController,
                   ),

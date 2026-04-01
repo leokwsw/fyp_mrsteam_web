@@ -539,6 +539,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       _showError('Please enter overview');
       return;
     }
+    if (_roomController.text.trim().isEmpty) {
+      _showError('Please enter room');
+      return;
+    }
     if (selectedSchoolId == null) {
       _showError('Please select a school');
       return;
@@ -770,7 +774,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                   const SizedBox(height: 24),
 
                   CustomTextField(
-                    label: 'Room',
+                    label: 'Room *',
                     placeholder: 'e.g., Room 301',
                     controller: _roomController,
                   ),
