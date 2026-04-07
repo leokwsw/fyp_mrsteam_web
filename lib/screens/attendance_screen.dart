@@ -35,6 +35,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final ApiProviderCourse _courseApi = getIt<ApiProviderCourse>();
   final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
 
+  late DateTime selectedMonth;
+
   String? selectedTutorId;
   String? selectedCourseId;
   String? selectedSchoolId;
@@ -55,9 +57,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool isExporting = false;
   String? errorMessage;
 
+  String get _monthStartDate =>
+      DateFormat('yyyy-MM-dd').format(selectedMonth);
+  String get _monthEndDate =>
+      DateFormat('yyyy-MM-dd').format(DateTime(selectedMonth.year, selectedMonth.month + 1, 1));
+
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    selectedMonth = DateTime(now.year, now.month, 1);
     _loadData();
   }
 
@@ -81,16 +90,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
 
     try {
-      // Load filter options in parallel
+      // Load filter options and attendances all in parallel
       final futures = await Future.wait([
         _usersApi.getUsers(role: 'tutor'),
         _courseApi.getCourses(),
         _schoolApi.getSchools(),
+        _attendanceApi.getAttendances(
+          tutorId: selectedTutorId,
+          courseId: selectedCourseId,
+          schoolId: selectedSchoolId,
+          startDate: _monthStartDate,
+          endDate: _monthEndDate,
+        ),
       ]);
 
       final usersRes = futures[0] as dynamic;
       final coursesRes = futures[1] as dynamic;
       final schoolsRes = futures[2] as dynamic;
+      final attendanceRes = futures[3] as dynamic;
 
       tutorOptions = usersRes.items;
       courseOptions = coursesRes.items;
@@ -128,8 +145,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         selectedSchoolId = null;
       }
 
-      // Load attendances
-      await _loadAttendances();
+      // Merge lookup maps from attendance response if available
+      if (attendanceRes.courses != null) {
+        coursesMap.addAll(attendanceRes.courses!);
+      }
+      if (attendanceRes.schools != null) {
+        schoolsMap.addAll(attendanceRes.schools!);
+      }
+
+      setState(() {
+        attendances = attendanceRes.items;
+        isLoading = false;
+      });
     } catch (e) {
       setState(() {
         errorMessage = e.toString();
@@ -149,6 +176,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         tutorId: selectedTutorId,
         courseId: selectedCourseId,
         schoolId: selectedSchoolId,
+        startDate: _monthStartDate,
+        endDate: _monthEndDate,
       );
 
       // Merge lookup maps from response if available
@@ -255,12 +284,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final now = DateTime.now();
 
     final filteredAttendances = attendances.where((attendance) {
-      // Exclude future classes
+      // Only include records in the selected month, and exclude future classes
       try {
         final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
-        if (scheduledStart.isAfter(now)) {
+        if (scheduledStart.year != selectedMonth.year ||
+            scheduledStart.month != selectedMonth.month) {
           return false;
         }
+        if (scheduledStart.isAfter(now)) return false;
       } catch (_) {}
 
       // Status filter
@@ -465,6 +496,36 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return '$code $name';
   }
 
+  void _previousMonth() {
+    setState(() {
+      selectedMonth = DateTime(selectedMonth.year, selectedMonth.month - 1, 1);
+    });
+    _loadAttendances();
+  }
+
+  void _nextMonth() {
+    setState(() {
+      selectedMonth = DateTime(selectedMonth.year, selectedMonth.month + 1, 1);
+    });
+    _loadAttendances();
+  }
+
+  void _goToCurrentMonth() {
+    final now = DateTime.now();
+    setState(() {
+      selectedMonth = DateTime(now.year, now.month, 1);
+    });
+    _loadAttendances();
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return months[month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -533,6 +594,38 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+
+              // Month Navigation
+              Row(
+                children: [
+                  Text(
+                    '${_getMonthName(selectedMonth.month)} ${selectedMonth.year}',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: _previousMonth,
+                    tooltip: 'Previous Month',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: _nextMonth,
+                    tooltip: 'Next Month',
+                  ),
+                  const SizedBox(width: 4),
+                  TextButton.icon(
+                    onPressed: _goToCurrentMonth,
+                    icon: const Icon(Icons.today, size: 18),
+                    label: const Text('This Month'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
               // Content
               if (isLoading)

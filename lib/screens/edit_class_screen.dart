@@ -769,6 +769,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Container(
           width: 400,
