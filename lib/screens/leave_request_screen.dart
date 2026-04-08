@@ -124,6 +124,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
             width: 450,
