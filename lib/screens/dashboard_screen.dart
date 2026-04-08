@@ -336,8 +336,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: StatCard(
-                      label: 'Classes Canceled',
-                      value: todayClasses.where((c) => _getClassStatus(c) == 'Canceled').length.toString(),
+                      label: 'Completion Rate',
+                      value: todayClasses.isEmpty
+                          ? '0%'
+                          : '${(todayClasses.where((c) => _getClassStatus(c) == 'Completed').length / todayClasses.length * 100).toStringAsFixed(1)}%',
                     ),
                   ),
                 ],
@@ -385,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Attendance Rate',
-                      value: '${attendanceFromFiltered['rate']}%',
+                      value: '${(attendanceFromFiltered['rate'] as num).toDouble().toStringAsFixed(1)}%',
                     ),
                   ),
                 ],
