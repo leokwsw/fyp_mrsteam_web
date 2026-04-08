@@ -54,23 +54,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day);
-      final endOfDay = startOfDay.add(Duration(days: 1));
       final dateFormat = DateFormat('yyyy-MM-dd');
 
-      // Load all data in parallel
+      // Load all data in parallel.
+      // Attendance is fetched without server-side date filter to avoid
+      // timezone mismatches; today-only filtering is done client-side.
       final futures = await Future.wait([
         _statsApi.getDashboardStatistics(
           tutorId: '',
           schoolId: '',
-          startDate: dateFormat.format(startOfDay),
-          endDate: dateFormat.format(endOfDay),
+          startDate: dateFormat.format(today),
+          endDate: dateFormat.format(today),
         ),
         _courseApi.getCourses(),
-        _attendanceApi.getAttendances(
-          startDate: dateFormat.format(startOfDay),
-          endDate: dateFormat.format(endOfDay),
-        ),
+        _attendanceApi.getAttendances(),
         _usersApi.getUsers(role: 'tutor'),
         _schoolApi.getSchools(),
       ]);
@@ -87,22 +84,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       coursesMap.clear();
 
       for (var tutor in tutorsRes.items) {
-        if (tutor.id != null) {
-          tutorsMap[tutor.id!] = tutor;
-        }
+        if (tutor.id != null) tutorsMap[tutor.id!] = tutor;
       }
       for (var school in schoolsRes.items) {
-        if (school.id != null) {
-          schoolsMap[school.id!] = school;
-        }
+        if (school.id != null) schoolsMap[school.id!] = school;
       }
       for (var course in coursesRes.items) {
-        if (course.id != null) {
-          coursesMap[course.id!] = course;
-        }
+        if (course.id != null) coursesMap[course.id!] = course;
       }
+      // Merge embedded courses/schools from the attendance response
+      if (attendanceRes.courses != null) coursesMap.addAll(attendanceRes.courses!);
+      if (attendanceRes.schools != null) schoolsMap.addAll(attendanceRes.schools!);
 
-      // Filter today's classes
+      // Filter today's classes (client-side, local time)
       final todayCourses = coursesRes.items.where((course) {
         for (var ts in course.timestamps) {
           final start = DateTime.fromMillisecondsSinceEpoch(ts.start.toInt());
@@ -197,21 +191,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Filter attendance to only show past classes
+  // Filter attendance: today only + class has already started (local time)
   List<AttendanceRes> get filteredAttendance {
     final now = DateTime.now();
     return todayAttendance.where((attendance) {
       try {
-        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(attendance.timestamp.start.toInt());
-        // Only include if the class has already started
-        return scheduledStart.isBefore(now);
+        final scheduledStart = DateTime.fromMillisecondsSinceEpoch(
+            attendance.timestamp.start.toInt());
+        return scheduledStart.year == now.year &&
+            scheduledStart.month == now.month &&
+            scheduledStart.day == now.day &&
+            scheduledStart.isBefore(now);
       } catch (e) {
-        return true;
+        return false;
       }
     }).toList()
       ..sort((a, b) {
-        // Sort by start time descending (most recent first)
-        return b.timestamp.start.compareTo(a.timestamp.start);
+        // Sort by check-in time when available (most recently checked in first),
+        // fall back to scheduled start time for absent tutors.
+        int aMs;
+        int bMs;
+        try {
+          aMs = a.checkInTime != null && a.checkInTime!.isNotEmpty
+              ? DateTime.parse(a.checkInTime!).millisecondsSinceEpoch
+              : a.timestamp.start.toInt();
+        } catch (_) {
+          aMs = a.timestamp.start.toInt();
+        }
+        try {
+          bMs = b.checkInTime != null && b.checkInTime!.isNotEmpty
+              ? DateTime.parse(b.checkInTime!).millisecondsSinceEpoch
+              : b.timestamp.start.toInt();
+        } catch (_) {
+          bMs = b.timestamp.start.toInt();
+        }
+        return bMs.compareTo(aMs);
       });
   }
 
@@ -262,8 +276,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    final stats = dashboardStats!;
-    final courseStats = stats.course.summary;
     final attendanceFromFiltered = attendanceStatsFromFiltered;
 
     return Scaffold(
@@ -311,21 +323,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Total Classes',
-                      value: courseStats.total.toString(),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: StatCard(
-                      label: 'Today\'s Classes',
                       value: todayClasses.length.toString(),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: StatCard(
-                      label: 'Completed',
+                      label: 'Classes Completed',
                       value: todayClasses.where((c) => _getClassStatus(c) == 'Completed').length.toString(),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: StatCard(
+                      label: 'Completion Rate',
+                      value: todayClasses.isEmpty
+                          ? '0%'
+                          : '${(todayClasses.where((c) => _getClassStatus(c) == 'Completed').length / todayClasses.length * 100).toStringAsFixed(1)}%',
                     ),
                   ),
                 ],
@@ -352,12 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Total Tutors',
-                      value: todayClasses
-                          .map((c) => c.tutorId)
-                          .where((id) => id.isNotEmpty)
-                          .toSet()
-                          .length
-                          .toString(),
+                      value: todayClasses.where((c) => c.tutorId.isNotEmpty).length.toString(),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -378,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Attendance Rate',
-                      value: '${attendanceFromFiltered['rate']}%',
+                      value: '${(attendanceFromFiltered['rate'] as num).toDouble().toStringAsFixed(1)}%',
                     ),
                   ),
                 ],
@@ -484,8 +493,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAttendanceTable() {
-    // Use filtered attendance (only past classes)
-    final pastAttendance = filteredAttendance;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final pastAttendance = (todayAttendance
+      .where((a) => a.timestamp.start.toInt() <= now)
+      .toList()
+      ..sort((a, b) => b.timestamp.start.toInt().compareTo(a.timestamp.start.toInt())))
+        .take(5).toList();
 
     if (pastAttendance.isEmpty) {
       return Container(
@@ -512,51 +525,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Column(
         children: [
+          // Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
             ),
             child: Row(
               children: [
-                Expanded(flex: 2, child: Text('Tutor Name', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Class', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Check-in Time', style: _headerStyle())),
-                Expanded(flex: 1, child: Text('Status', style: _headerStyle())),
+                Expanded(flex: 3, child: Text('Tutor', style: _headerStyle())),
+                Expanded(flex: 4, child: Text('Class', style: _headerStyle())),
+                Expanded(flex: 3, child: Text('Last Check-in', style: _headerStyle())),
+                SizedBox(width: 90, child: Text('Status', style: _headerStyle())),
               ],
             ),
           ),
-          ...pastAttendance.take(5).map((attendance) {
+          // Rows
+          ...pastAttendance.map((attendance) {
             final tutor = tutorsMap[attendance.tutorId];
             final course = coursesMap[attendance.courseId];
             final status = _getAttendanceStatus(attendance);
             final statusType = _getAttendanceStatusType(status);
-            
-            String checkInTime = '-';
-            if (attendance.checkInTime != null) {
+
+            final code = course?.courseCode.trim() ?? '';
+            final name = course?.name.trim() ?? '';
+            final classDisplay = code.isNotEmpty && name.isNotEmpty
+                ? '$code $name'
+                : name.isNotEmpty
+                    ? name
+                    : code.isNotEmpty
+                        ? code
+                        : '-';
+
+            String checkInDisplay = '-';
+            if (attendance.checkInTime != null && attendance.checkInTime!.isNotEmpty) {
               try {
-                final dt = DateTime.parse(attendance.checkInTime!);
-                checkInTime = DateFormat('hh:mm a').format(dt);
-              } catch (e) {}
+                final dt = DateTime.parse(attendance.checkInTime!).toLocal();
+                checkInDisplay = DateFormat('hh:mm a').format(dt);
+              } catch (_) {}
             }
 
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5))),
+                border: Border(
+                  bottom: BorderSide(color: AppColors.cardBorder.withValues(alpha: 0.5)),
+                ),
               ),
               child: Row(
                 children: [
-                  Expanded(flex: 2, child: Text(tutor?.name ?? '-', style: _cellStyle())),
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: Text(
-                      course?.name ?? '-',
-                      style: _cellStyle().copyWith(color: AppColors.textSecondary),
+                      tutor?.name ?? '-',
+                      style: _cellStyle().copyWith(fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Expanded(flex: 2, child: Text(checkInTime, style: _cellStyle())),
-                  Expanded(flex: 1, child: StatusBadge(text: status, type: statusType)),
+                  Expanded(
+                    flex: 4,
+                    child: Text(
+                      classDisplay,
+                      style: _cellStyle().copyWith(color: AppColors.textSecondary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(checkInDisplay, style: _cellStyle()),
+                  ),
+                  SizedBox(
+                    width: 90,
+                    child: StatusBadge(text: status, type: statusType),
+                  ),
                 ],
               ),
             );
