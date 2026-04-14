@@ -281,17 +281,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   List<AttendanceRes> _getFilteredAttendances() {
-    final now = DateTime.now();
-
     final filteredAttendances = attendances.where((attendance) {
-      // Only include records in the selected month, and exclude future classes
+      // Only include records in the selected month
       try {
         final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
         if (scheduledStart.year != selectedMonth.year ||
             scheduledStart.month != selectedMonth.month) {
           return false;
         }
-        if (scheduledStart.isAfter(now)) return false;
       } catch (_) {}
 
       // Status filter
