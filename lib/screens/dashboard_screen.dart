@@ -107,7 +107,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
         }
         return false;
-      }).toList();
+      }).toList()
+        ..sort((a, b) {
+          final aStart = a.timestamps.isNotEmpty ? a.timestamps.first.start.toInt() : 0;
+          final bStart = b.timestamps.isNotEmpty ? b.timestamps.first.start.toInt() : 0;
+          return aStart.compareTo(bStart);
+        });
 
       setState(() {
         dashboardStats = statsRes;
@@ -132,19 +137,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  String _getClassStatus(CourseRes course) {
+  AttendanceRes? _getAttendanceForCourse(CourseRes course) {
+    try {
+      return todayAttendance.firstWhere((a) => a.courseId == course.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _getClassStatus(CourseRes course, {AttendanceRes? attendance}) {
     if (course.isDeleted == true) return 'Canceled';
-    
+
     final now = DateTime.now();
     for (var ts in course.timestamps) {
       final start = DateTime.fromMillisecondsSinceEpoch(ts.start.toInt());
       final end = DateTime.fromMillisecondsSinceEpoch(ts.end.toInt());
-      
-      if (now.isAfter(start) && now.isBefore(end)) {
-        return 'Ongoing';
-      } else if (now.isBefore(start)) {
-        return 'Upcoming';
+
+      if (now.isBefore(start)) return 'Upcoming';
+
+      // Class has started — use attendance to determine status
+      if (attendance != null) {
+        if (!attendance.checked) return 'Incomplete';
+        return now.isBefore(end) ? 'Ongoing' : 'Completed';
       }
+
+      // No attendance record: fall back to time-based
+      return now.isBefore(end) ? 'Ongoing' : 'Completed';
     }
     return 'Completed';
   }
@@ -156,6 +174,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 'Upcoming':
         return StatusType.success;
       case 'Canceled':
+        return StatusType.error;
+      case 'Incomplete':
         return StatusType.error;
       default:
         return StatusType.success;
@@ -330,16 +350,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: StatCard(
                       label: 'Classes Completed',
-                      value: todayClasses.where((c) => _getClassStatus(c) == 'Completed').length.toString(),
+                      value: todayClasses.where((c) => _getClassStatus(c, attendance: _getAttendanceForCourse(c)) == 'Completed').length.toString(),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: StatCard(
-                      label: 'Completion Rate',
+                      label: 'Incompletion Rate',
                       value: todayClasses.isEmpty
                           ? '0%'
-                          : '${(todayClasses.where((c) => _getClassStatus(c) == 'Completed').length / todayClasses.length * 100).toStringAsFixed(1)}%',
+                          : '${(todayClasses.where((c) => _getClassStatus(c, attendance: _getAttendanceForCourse(c)) == 'Incomplete').length / todayClasses.length * 100).toStringAsFixed(1)}%',
                     ),
                   ),
                 ],
@@ -457,7 +477,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           ...todayClasses.take(5).map((course) {
             final tutor = tutorsMap[course.tutorId];
-            final status = _getClassStatus(course);
+            final attendance = _getAttendanceForCourse(course);
+            final status = _getClassStatus(course, attendance: attendance);
             final statusType = _getClassStatusType(status);
             
             String timeStr = '-';
@@ -640,7 +661,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'title': isCheckedIn 
             ? '${tutor?.name ?? 'Tutor'} checked in'
             : '${tutor?.name ?? 'Tutor'} marked absent',
-        'subtitle': course?.name ?? 'Class',
+        'subtitle': () {
+          final code = course?.courseCode.trim() ?? '';
+          final name = course?.name.trim() ?? '';
+          if (code.isNotEmpty && name.isNotEmpty) return '$code $name';
+          if (name.isNotEmpty) return name;
+          if (code.isNotEmpty) return code;
+          return 'Class';
+        }(),
         'isSuccess': isCheckedIn,
       };
     }).toList();
