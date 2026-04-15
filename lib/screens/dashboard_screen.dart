@@ -448,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 2, child: Text('Class Name', style: _headerStyle())),
+                Expanded(flex: 2, child: Text('Class', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Time', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Assigned Tutor', style: _headerStyle())),
                 Expanded(flex: 1, child: Text('Status', style: _headerStyle())),
@@ -466,6 +466,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               timeStr = '${_formatTime(ts.start)} - ${_formatTime(ts.end)}';
             }
 
+            final classCode = course.courseCode.trim();
+            final className = course.name.trim();
+            final classDisplay = classCode.isNotEmpty && className.isNotEmpty
+                ? '$classCode $className'
+                : className.isNotEmpty
+                    ? className
+                    : classCode.isNotEmpty
+                        ? classCode
+                        : '-';
+
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -473,7 +483,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Row(
                 children: [
-                  Expanded(flex: 2, child: Text(course.name, style: _cellStyle())),
+                  Expanded(flex: 2, child: Text(classDisplay, style: _cellStyle())),
                   Expanded(flex: 2, child: Text(timeStr, style: _cellStyle())),
                   Expanded(
                     flex: 2,
@@ -493,9 +503,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAttendanceTable() {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now();
+    final nowMs = now.millisecondsSinceEpoch;
     final pastAttendance = (todayAttendance
-      .where((a) => a.timestamp.start.toInt() <= now)
+      .where((a) {
+        final start = a.timestamp.start.toInt();
+        final dt = DateTime.fromMillisecondsSinceEpoch(start);
+        return dt.year == now.year &&
+            dt.month == now.month &&
+            dt.day == now.day &&
+            start <= nowMs;
+      })
       .toList()
       ..sort((a, b) => b.timestamp.start.toInt().compareTo(a.timestamp.start.toInt())))
         .take(5).toList();

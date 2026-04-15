@@ -27,7 +27,8 @@ class _ClassListScreenState extends State<ClassListScreen> {
   final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
 
   late DateTime currentDateTimeHK;
-  String selectedTab = 'Upcoming';
+  late DateTime selectedMonth;
+  String selectedTab = 'All';
   String? selectedCourseId;
   String? selectedSchoolId;
   String? selectedTutorId;
@@ -49,6 +50,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
   void initState() {
     super.initState();
     currentDateTimeHK = _getHongKongTime();
+    selectedMonth = DateTime(currentDateTimeHK.year, currentDateTimeHK.month, 1);
     _loadData();
 
     Future.delayed(Duration.zero, () {
@@ -70,6 +72,33 @@ class _ClassListScreenState extends State<ClassListScreen> {
         _startTimeUpdate();
       }
     });
+  }
+
+  void _previousMonth() {
+    setState(() {
+      selectedMonth = DateTime(selectedMonth.year, selectedMonth.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      selectedMonth = DateTime(selectedMonth.year, selectedMonth.month + 1);
+    });
+  }
+
+  void _goToToday() {
+    setState(() {
+      currentDateTimeHK = _getHongKongTime();
+      selectedMonth = DateTime(currentDateTimeHK.year, currentDateTimeHK.month, 1);
+    });
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return months[month - 1];
   }
 
   Theme _buildDropdownTheme({required Widget child}) {
@@ -241,6 +270,10 @@ class _ClassListScreenState extends State<ClassListScreen> {
         final startDateTime = startDateTimeUtc.add(const Duration(hours: 8));
         final endDateTime = endDateTimeUtc.add(const Duration(hours: 8));
 
+        // Apply month filter
+        if (startDateTime.year != selectedMonth.year ||
+            startDateTime.month != selectedMonth.month) continue;
+
         // Apply tab filter
         final now = currentDateTimeHK;
         if (selectedTab == 'Upcoming' && endDateTime.isBefore(now)) continue;
@@ -380,6 +413,43 @@ class _ClassListScreenState extends State<ClassListScreen> {
                 ],
               ),
               const SizedBox(height: 32),
+
+              // Month Navigation
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '${_getMonthName(selectedMonth.month)} ${selectedMonth.year}',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 16),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _previousMonth,
+                        tooltip: 'Previous Month',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _nextMonth,
+                        tooltip: 'Next Month',
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _goToToday,
+                        icon: const Icon(Icons.today, size: 18),
+                        label: const Text('Today'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
 
               // Filters and New Class Button
               _buildFiltersSection(),
