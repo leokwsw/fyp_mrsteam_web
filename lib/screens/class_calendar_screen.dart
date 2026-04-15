@@ -27,7 +27,7 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
 
   late DateTime selectedMonth;
   late DateTime currentDateTimeHK;
-  String selectedTab = 'Upcoming';
+  String selectedTab = 'All';
   String? selectedCourseId;
   String? selectedSchoolId;
   String? selectedTutorId;
