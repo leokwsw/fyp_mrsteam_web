@@ -339,11 +339,11 @@ class _ClassCalendarScreenState extends State<ClassCalendarScreen> {
               // Tabs
               Row(
                 children: [
+                  _buildTab('All'),
+                  const SizedBox(width: 32),
                   _buildTab('Upcoming'),
                   const SizedBox(width: 32),
                   _buildTab('Past'),
-                  const SizedBox(width: 32),
-                  _buildTab('All'),
                 ],
               ),
               const SizedBox(height: 32),
