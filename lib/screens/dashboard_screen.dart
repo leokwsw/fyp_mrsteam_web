@@ -356,10 +356,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: StatCard(
-                      label: 'Incompletion Rate',
+                      label: 'Classes Incomplete',
+                      value: todayClasses.where((c) => _getClassStatus(c, attendance: _getAttendanceForCourse(c)) == 'Incomplete').length.toString(),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: StatCard(
+                      label: 'Completion Rate',
                       value: todayClasses.isEmpty
                           ? '0%'
-                          : '${(todayClasses.where((c) => _getClassStatus(c, attendance: _getAttendanceForCourse(c)) == 'Incomplete').length / todayClasses.length * 100).toStringAsFixed(1)}%',
+                          : '${(todayClasses.where((c) => _getClassStatus(c, attendance: _getAttendanceForCourse(c)) == 'Completed').length / todayClasses.length * 100).toStringAsFixed(1)}%',
                     ),
                   ),
                 ],
