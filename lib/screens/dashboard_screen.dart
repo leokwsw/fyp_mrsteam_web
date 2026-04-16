@@ -580,7 +580,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               children: [
                 Expanded(flex: 3, child: Text('Tutor', style: _headerStyle())),
-                Expanded(flex: 4, child: Text('Class', style: _headerStyle())),
+                Expanded(flex: 3, child: Text('Class', style: _headerStyle())),
+                Expanded(flex: 3, child: Text('Time', style: _headerStyle())),
                 Expanded(flex: 3, child: Text('Last Check-in', style: _headerStyle())),
                 SizedBox(width: 90, child: Text('Status', style: _headerStyle())),
               ],
@@ -629,11 +630,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Expanded(
-                    flex: 4,
+                    flex: 3,
                     child: Text(
                       classDisplay,
                       style: _cellStyle().copyWith(color: AppColors.textSecondary),
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '${_formatTime(attendance.timestamp.start)} - ${_formatTime(attendance.timestamp.end)}',
+                      style: _cellStyle(),
                     ),
                   ),
                   Expanded(
