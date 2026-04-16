@@ -418,7 +418,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   String _getStatusFromAttendance(AttendanceRes attendance) {
-    if (!attendance.checked) return 'Absent';
+    if (!attendance.checked) {
+      try {
+        final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
+        if (DateTime.now().isBefore(scheduledStart)) {
+          return 'Pending';
+        }
+      } catch (_) {}
+      return 'Absent';
+    }
 
     final checkIn = _isoToLocal(attendance.checkInTime);
     if (checkIn == null) return 'Present';
@@ -426,8 +434,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     try {
       final scheduledStart = _epochMsToLocal(attendance.timestamp.start);
 
-      // Late threshold = 5 minutes
-      if (checkIn.isAfter(scheduledStart.add(const Duration(minutes: 5)))) {
+      // Late threshold = 10 minutes
+      if (checkIn.isAfter(scheduledStart.add(const Duration(minutes: 10)))) {
         return 'Late';
       }
     } catch (_) {}
@@ -442,6 +450,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       case 'Absent':
       case 'Late':
         return StatusType.error;
+      case 'Pending':
+        return StatusType.info;
       default:
         return StatusType.success;
     }
@@ -896,7 +906,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildStatusDropdown() {
-    final validStatuses = {'Present', 'Absent', 'Late'};
+    final validStatuses = {'Present', 'Absent', 'Late', 'Pending'};
     final currentValue =
         (selectedStatus != null && validStatuses.contains(selectedStatus))
             ? selectedStatus
@@ -936,6 +946,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 DropdownMenuItem<String?>(
                   value: 'Late',
                   child: Text('Late'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Pending',
+                  child: Text('Pending'),
                 ),
               ],
               onChanged: (value) {
