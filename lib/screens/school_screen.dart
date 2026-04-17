@@ -6,6 +6,7 @@ import 'package:fyp_mrsteam_web/data/model/request/req_school.dart';
 import 'package:fyp_mrsteam_web/data/model/response/res_school.dart';
 import 'package:fyp_mrsteam_web/screens/create_class_screen.dart'
     show MapPickerDialog, FormUi;
+import 'package:fyp_mrsteam_web/services/places_search_service.dart';
 import 'package:fyp_mrsteam_web/widgets/app_bar_widget.dart';
 import 'package:fyp_mrsteam_web/widgets/custom_button.dart';
 
@@ -70,7 +71,7 @@ class _SchoolScreenState extends State<SchoolScreen> {
       builder: (_) => _SchoolMapFormDialog(
         onSave: (name, lat, lng, address) async {
           await _schoolApi.createSchool(
-            CreateSchoolReq(name, GpsLocation(lat, lng)),
+            CreateSchoolReq(name, GpsLocation(lat, lng), address: address),
           );
           if (mounted) Navigator.of(context).pop();
           _loadSchools();
@@ -91,7 +92,7 @@ class _SchoolScreenState extends State<SchoolScreen> {
         onSave: (name, lat, lng, address) async {
           await _schoolApi.updateSchool(
             school.id!,
-            UpdateSchoolReq(name: name, gps: GpsLocation(lat, lng)),
+            UpdateSchoolReq(name: name, gps: GpsLocation(lat, lng), address: address),
           );
           if (mounted) Navigator.of(context).pop();
           _loadSchools();
@@ -410,11 +411,13 @@ class _SchoolMapFormDialog extends StatefulWidget {
 class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _locationController;
+  late final TextEditingController _addressController;
+  final PlacesSearchService _placesService = PlacesSearchService();
 
   double? _selectedLat;
   double? _selectedLng;
   String? _selectedAddress;
-  String? _selectedStreet;
+  bool _isLoadingAddress = false;
 
   bool _isSaving = false;
   String? _errorMessage;
@@ -424,13 +427,12 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _locationController = TextEditingController();
+    _addressController = TextEditingController(text: widget.initialAddress ?? '');
     _selectedLat = widget.initialLat;
     _selectedLng = widget.initialLng;
     _selectedAddress = widget.initialAddress;
 
-    if (widget.initialAddress != null && widget.initialAddress!.trim().isNotEmpty) {
-      _locationController.text = widget.initialAddress!;
-    } else if (_selectedLat != null && _selectedLng != null) {
+    if (_selectedLat != null && _selectedLng != null) {
       _locationController.text =
           'Lat: ${_selectedLat!.toStringAsFixed(6)}, Lng: ${_selectedLng!.toStringAsFixed(6)}';
     }
@@ -440,6 +442,7 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
   void dispose() {
     _nameController.dispose();
     _locationController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -453,24 +456,48 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
     );
 
     if (result != null) {
-      setState(() {
-        _selectedLat = result['lat'] as double?;
-        _selectedLng = result['lng'] as double?;
-        _selectedAddress = result['address'] as String?;
-        _selectedStreet = result['street'] as String?;
+      final lat = result['lat'] as double?;
+      final lng = result['lng'] as double?;
+      final address = result['address'] as String?;
+      final street = result['street'] as String?;
 
-        if (_selectedStreet != null && _selectedStreet!.trim().isNotEmpty) {
-          _locationController.text = _selectedStreet!;
-        } else if (_selectedAddress != null &&
-            _selectedAddress!.trim().isNotEmpty) {
-          _locationController.text = _selectedAddress!;
-        } else if (_selectedLat != null && _selectedLng != null) {
+      setState(() {
+        _selectedLat = lat;
+        _selectedLng = lng;
+        _selectedAddress = address;
+
+        if (lat != null && lng != null) {
           _locationController.text =
-              'Lat: ${_selectedLat!.toStringAsFixed(6)}, Lng: ${_selectedLng!.toStringAsFixed(6)}';
+              'Lat: ${lat.toStringAsFixed(6)}, Lng: ${lng.toStringAsFixed(6)}';
         } else {
           _locationController.clear();
         }
+
+        if (street != null && street.trim().isNotEmpty) {
+          _addressController.text = street;
+        } else if (address != null && address.trim().isNotEmpty) {
+          _addressController.text = address;
+        }
       });
+
+      // Fallback: if MapPickerDialog didn't return address, do our own reverse geocode
+      if ((address == null || address.trim().isEmpty) && lat != null && lng != null) {
+        setState(() => _isLoadingAddress = true);
+        try {
+          final geocoded = await _placesService.reverseGeocode(lat, lng);
+          if (mounted && geocoded != null && geocoded.trim().isNotEmpty) {
+            setState(() {
+              _selectedAddress = geocoded.trim();
+              _addressController.text = geocoded.trim();
+              _isLoadingAddress = false;
+            });
+          } else {
+            if (mounted) setState(() => _isLoadingAddress = false);
+          }
+        } catch (_) {
+          if (mounted) setState(() => _isLoadingAddress = false);
+        }
+      }
     }
   }
 
@@ -490,8 +517,11 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
     });
 
     try {
+      final address = _addressController.text.trim().isEmpty
+          ? _selectedAddress
+          : _addressController.text.trim();
       await widget.onSave(
-          _nameController.text.trim(), _selectedLat!, _selectedLng!, _selectedAddress);
+          _nameController.text.trim(), _selectedLat!, _selectedLng!, address);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -590,7 +620,7 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
                     controller: _locationController,
                     readOnly: true,
                     decoration: FormUi.inputDecoration(
-                      hintText: 'Search & select location on map',
+                      hintText: 'Click map to select location',
                       prefixIcon: const Icon(Icons.location_on,
                           color: AppColors.textSecondary),
                     ),
@@ -617,10 +647,40 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+
+            // Address
+            const Text(
+              'Address',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _addressController,
+              decoration: FormUi.inputDecoration(
+                hintText: _isLoadingAddress
+                    ? 'Loading address...'
+                    : 'Auto-filled after selecting location',
+                prefixIcon: _isLoadingAddress
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : const Icon(Icons.place_outlined,
+                        color: AppColors.textSecondary),
+              ),
+            ),
 
             if (_selectedAddress != null &&
                 _selectedAddress!.trim().isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
                 child: Text(

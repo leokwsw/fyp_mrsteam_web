@@ -165,17 +165,33 @@ class PlacesSearchService {
       '&language=zh-Hant',
     );
 
-    final res = await http.get(uri);
-    if (res.statusCode != 200) {
-      debugPrint('[ReverseGeocode] ${res.statusCode} ${res.body}');
+    try {
+      final res = await http.get(uri);
+      debugPrint('[ReverseGeocode] HTTP ${res.statusCode}');
+      if (res.statusCode != 200) {
+        debugPrint('[ReverseGeocode] Error body: ${res.body}');
+        return null;
+      }
+
+      final m = jsonDecode(res.body) as Map<String, dynamic>;
+      final status = m['status'] as String?;
+      debugPrint('[ReverseGeocode] Google status: $status');
+
+      if (status != 'OK') {
+        debugPrint('[ReverseGeocode] Error: ${m['error_message'] ?? status}');
+        return null;
+      }
+
+      final results = (m['results'] as List?) ?? [];
+      if (results.isEmpty) return null;
+
+      final address =
+          (results.first as Map<String, dynamic>)['formatted_address']?.toString();
+      debugPrint('[ReverseGeocode] Address: $address');
+      return address;
+    } catch (e) {
+      debugPrint('[ReverseGeocode] Exception: $e');
       return null;
     }
-
-    final m = jsonDecode(res.body) as Map<String, dynamic>;
-    final results = (m['results'] as List?) ?? [];
-    if (results.isEmpty) return null;
-
-    return (results.first as Map<String, dynamic>)['formatted_address']
-        ?.toString();
   }
 }
