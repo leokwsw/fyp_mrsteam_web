@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class PlaceSearchResult {
@@ -157,7 +158,24 @@ class PlacesSearchService {
   }
 
   Future<String?> reverseGeocode(double lat, double lng) async {
-    // 若你有 Geocoding API 可在此实现；目前先返回 null。
-    return null;
+    final uri = Uri.parse(
+      'https://maps.googleapis.com/maps/api/geocode/json'
+      '?latlng=$lat,$lng'
+      '&key=$_apiKey'
+      '&language=zh-Hant',
+    );
+
+    final res = await http.get(uri);
+    if (res.statusCode != 200) {
+      debugPrint('[ReverseGeocode] ${res.statusCode} ${res.body}');
+      return null;
+    }
+
+    final m = jsonDecode(res.body) as Map<String, dynamic>;
+    final results = (m['results'] as List?) ?? [];
+    if (results.isEmpty) return null;
+
+    return (results.first as Map<String, dynamic>)['formatted_address']
+        ?.toString();
   }
 }
