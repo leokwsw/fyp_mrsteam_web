@@ -32,7 +32,7 @@ CourseRes _$CourseResFromJson(Map<String, dynamic> json) => CourseRes(
       : CourseRes._toSafeString(
           CourseRes._readSubjectShortName(json, 'subjectShortName'),
         ),
-  isDeleted: (json['isDeleted'] ?? json['is_deleted']) as bool?,
+  isDeleted: json['isDeleted'] as bool?,
   createdAt: json['createdAt'] as String?,
   updatedAt: json['updatedAt'] as String?,
 );

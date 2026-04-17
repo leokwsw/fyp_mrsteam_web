@@ -18,10 +18,15 @@ CreateSchoolReq _$CreateSchoolReqFromJson(Map<String, dynamic> json) =>
     CreateSchoolReq(
       json['name'] as String,
       GpsLocation.fromJson(json['gps'] as Map<String, dynamic>),
+      address: json['address'] as String?,
     );
 
 Map<String, dynamic> _$CreateSchoolReqToJson(CreateSchoolReq instance) =>
-    <String, dynamic>{'name': instance.name, 'gps': instance.gps};
+    <String, dynamic>{
+      'name': instance.name,
+      'gps': instance.gps,
+      'address': instance.address,
+    };
 
 UpdateSchoolReq _$UpdateSchoolReqFromJson(Map<String, dynamic> json) =>
     UpdateSchoolReq(
@@ -29,7 +34,12 @@ UpdateSchoolReq _$UpdateSchoolReqFromJson(Map<String, dynamic> json) =>
       gps: json['gps'] == null
           ? null
           : GpsLocation.fromJson(json['gps'] as Map<String, dynamic>),
+      address: json['address'] as String?,
     );
 
 Map<String, dynamic> _$UpdateSchoolReqToJson(UpdateSchoolReq instance) =>
-    <String, dynamic>{'name': instance.name, 'gps': instance.gps};
+    <String, dynamic>{
+      'name': instance.name,
+      'gps': instance.gps,
+      'address': instance.address,
+    };
