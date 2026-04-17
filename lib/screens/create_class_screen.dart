@@ -463,6 +463,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('Number of Occurrences'),
           content: Column(
             mainAxisSize: MainAxisSize.min,

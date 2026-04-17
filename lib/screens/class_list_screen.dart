@@ -8,9 +8,11 @@ import '../core/config/get_it.dart';
 import '../data/api/api_provider_course.dart';
 import '../data/api/api_provider_school.dart';
 import '../data/api/api_provider_users.dart';
+import '../data/api/api_provider_attendance.dart';
 import '../data/model/response/res_course.dart';
 import '../data/model/response/res_school.dart';
 import '../data/model/response/res_user.dart';
+import '../data/model/response/res_attendance.dart';
 import '../data/model/request/req_school.dart';
 import '../widgets/class_details_dialog.dart';
 
@@ -25,6 +27,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
   final ApiProviderCourse _courseApi = getIt<ApiProviderCourse>();
   final ApiProviderSchool _schoolApi = getIt<ApiProviderSchool>();
   final ApiProviderUsers _usersApi = getIt<ApiProviderUsers>();
+  final ApiProviderAttendance _attendanceApi = getIt<ApiProviderAttendance>();
 
   late DateTime currentDateTimeHK;
   late DateTime selectedMonth;
@@ -35,6 +38,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
   String? selectedStatus;
 
   List<CourseRes> allCourses = [];
+  List<AttendanceRes> allAttendances = [];
   Map<String, SchoolRes> schoolsMap = {};
   Map<String, UserResponse> tutorsMap = {};
 
@@ -93,6 +97,16 @@ class _ClassListScreenState extends State<ClassListScreen> {
     });
   }
 
+  AttendanceRes? _getAttendanceForTimestamp(String courseId, num timestampStart) {
+    try {
+      return allAttendances.firstWhere(
+        (a) => a.courseId == courseId && a.timestamp.start == timestampStart,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   String _getMonthName(int month) {
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -125,11 +139,13 @@ class _ClassListScreenState extends State<ClassListScreen> {
         _courseApi.getCourses(),
         _schoolApi.getSchools(),
         _usersApi.getUsers(role: 'tutor'),
+        _attendanceApi.getAttendances(),
       ]);
 
       final coursesRes = futures[0] as CourseListRes;
       final schoolsRes = futures[1] as SchoolListRes;
       final tutorsRes = futures[2] as dynamic;
+      final attendanceRes = futures[3] as AttendanceListRes;
 
       // ===== Debug logs: parsed result =====
       debugPrint('=== parsed courses === count=${coursesRes.items.length}');
@@ -159,7 +175,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
         selectedTutorId = null;
       }
       if (selectedStatus != null &&
-          !const {'Scheduled', 'Completed', 'Canceled'}
+          !const {'Upcoming', 'Ongoing', 'Incomplete', 'Completed', 'Canceled'}
               .contains(selectedStatus)) {
         selectedStatus = null;
       }
@@ -182,6 +198,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
       setState(() {
         allCourses = coursesRes.items;
+        allAttendances = attendanceRes.items;
         isLoading = false;
       });
     } catch (e, st) {
@@ -232,10 +249,16 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Canceled':
+      case 'Upcoming':
+        return const Color(0xFF1E3A5F);
+      case 'Ongoing':
+        return Colors.blue;
+      case 'Incomplete':
         return const Color(0xFFB71C1C);
       case 'Completed':
         return Colors.green;
+      case 'Canceled':
+        return const Color(0xFFB71C1C);
       default:
         return const Color(0xFF1E3A5F);
     }
@@ -279,12 +302,24 @@ class _ClassListScreenState extends State<ClassListScreen> {
         if (selectedTab == 'Upcoming' && endDateTime.isBefore(now)) continue;
         if (selectedTab == 'Past' && endDateTime.isAfter(now)) continue;
 
-        // Determine status
-        String status = 'Scheduled';
+        // Determine status (mirrors dashboard _getClassStatus logic)
+        String status;
         if (course.isDeleted == true) {
           status = 'Canceled';
-        } else if (endDateTime.isBefore(now)) {
-          status = 'Completed';
+        } else if (now.isBefore(startDateTime)) {
+          status = 'Upcoming';
+        } else {
+          final attendance = _getAttendanceForTimestamp(
+              course.id ?? '', timestamp.start);
+          if (attendance != null) {
+            if (!attendance.checked) {
+              status = 'Incomplete';
+            } else {
+              status = now.isBefore(endDateTime) ? 'Ongoing' : 'Completed';
+            }
+          } else {
+            status = now.isBefore(endDateTime) ? 'Ongoing' : 'Completed';
+          }
         }
 
         // Apply status filter
@@ -755,7 +790,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
   }
 
   Widget _buildStatusDropdown(double width) {
-    const validStatuses = {'Scheduled', 'Completed', 'Canceled'};
+    const validStatuses = {'Upcoming', 'Ongoing', 'Incomplete', 'Completed', 'Canceled'};
     final currentValue =
         (selectedStatus != null && validStatuses.contains(selectedStatus))
             ? selectedStatus
@@ -785,8 +820,16 @@ class _ClassListScreenState extends State<ClassListScreen> {
                   child: Text('All Status'),
                 ),
                 DropdownMenuItem<String?>(
-                  value: 'Scheduled',
-                  child: Text('Scheduled'),
+                  value: 'Upcoming',
+                  child: Text('Upcoming'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Ongoing',
+                  child: Text('Ongoing'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'Incomplete',
+                  child: Text('Incomplete'),
                 ),
                 DropdownMenuItem<String?>(
                   value: 'Completed',
