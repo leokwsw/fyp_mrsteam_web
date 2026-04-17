@@ -22,8 +22,9 @@ class GpsLocation {
 class CreateSchoolReq {
   final String name;
   final GpsLocation gps;
+  final String? address;
 
-  CreateSchoolReq(this.name, this.gps);
+  CreateSchoolReq(this.name, this.gps, {this.address});
 
   factory CreateSchoolReq.fromJson(Map<String, dynamic> json) =>
       _$CreateSchoolReqFromJson(json);
@@ -38,8 +39,9 @@ class CreateSchoolReq {
 class UpdateSchoolReq {
   final String? name;
   final GpsLocation? gps;
+  final String? address;
 
-  UpdateSchoolReq({this.name, this.gps});
+  UpdateSchoolReq({this.name, this.gps, this.address});
 
   factory UpdateSchoolReq.fromJson(Map<String, dynamic> json) =>
       _$UpdateSchoolReqFromJson(json);
