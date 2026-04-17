@@ -659,6 +659,7 @@ class _SchoolMapFormDialogState extends State<_SchoolMapFormDialog> {
             ),
             const SizedBox(height: 8),
             TextField(
+              readOnly: true,
               controller: _addressController,
               decoration: FormUi.inputDecoration(
                 hintText: _isLoadingAddress

@@ -49,7 +49,7 @@ class PlacesSearchService {
     final Map<String, dynamic> body = {
       'input': q,
       'sessionToken': _sessionToken,
-      'languageCode': 'zh-Hant',
+      'languageCode': 'en-US',
       'regionCode': 'HK',
       if (countryCode != null) 'includedRegionCodes': [countryCode.toUpperCase()],
       if (nearLat != null && nearLng != null)
@@ -162,7 +162,7 @@ class PlacesSearchService {
       'https://maps.googleapis.com/maps/api/geocode/json'
       '?latlng=$lat,$lng'
       '&key=$_apiKey'
-      '&language=zh-Hant',
+      '&language=en-US',
     );
 
     try {
