@@ -19,3 +19,19 @@ Map<String, dynamic> _$HealthResToJson(HealthRes instance) => <String, dynamic>{
   'error': instance.error,
   'details': instance.details,
 };
+
+ServerTimeRes _$ServerTimeResFromJson(Map<String, dynamic> json) =>
+    ServerTimeRes(
+      json['iso'] as String,
+      json['unixMs'] as num,
+      json['timezone'] as String,
+      json['timezoneOffsetMinutes'] as num,
+    );
+
+Map<String, dynamic> _$ServerTimeResToJson(ServerTimeRes instance) =>
+    <String, dynamic>{
+      'iso': instance.iso,
+      'unixMs': instance.unixMs,
+      'timezone': instance.timezone,
+      'timezoneOffsetMinutes': instance.timezoneOffsetMinutes,
+    };

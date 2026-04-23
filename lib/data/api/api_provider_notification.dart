@@ -13,6 +13,16 @@ class ApiProviderNotification extends ApiProviderBase {
     ).then((response) => MessageRes.fromJson(response.data ?? {}));
   }
 
+  Future<BroadcastNotificationRes> createTestBroadcastNotification(
+    CreateTestBroadcastNotificationReq req,
+  ) async {
+    return await ApiProviderBase.post<Map<String, dynamic>>(
+      MrSteamAPIs.notificationTestBroadcast,
+      data: req.toJson(),
+    ).then((response) =>
+        BroadcastNotificationRes.fromJson(response.data ?? {}));
+  }
+
   Future<NotificationListRes> getNotifications({
     int? page,
     int? limit,

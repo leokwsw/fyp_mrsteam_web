@@ -32,3 +32,25 @@ class LoginRes {
 
   static fromJsonModel(Map<String, dynamic> json) => LoginRes.fromJson(json);
 }
+
+/// 對應 OTP 驗證後回傳（常見為 `resetToken`）
+@JsonSerializable()
+class VerifyOtpRes {
+  @JsonKey(readValue: VerifyOtpRes._readResetToken)
+  final String? resetToken;
+  final String? message;
+
+  VerifyOtpRes({this.resetToken, this.message});
+
+  static Object? _readResetToken(Map<dynamic, dynamic> json, String key) {
+    return json['resetToken'] ?? json['reset_token'];
+  }
+
+  factory VerifyOtpRes.fromJson(Map<String, dynamic> json) =>
+      _$VerifyOtpResFromJson(json);
+
+  Map<String, dynamic> toJson() => _$VerifyOtpResToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      VerifyOtpRes.fromJson(json);
+}

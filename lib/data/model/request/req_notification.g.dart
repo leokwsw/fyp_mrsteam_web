@@ -14,6 +14,28 @@ Map<String, dynamic> _$RegisterDeviceTokenReqToJson(
   RegisterDeviceTokenReq instance,
 ) => <String, dynamic>{'fcmToken': instance.fcmToken};
 
+CreateTestBroadcastNotificationReq _$CreateTestBroadcastNotificationReqFromJson(
+  Map<String, dynamic> json,
+) => CreateTestBroadcastNotificationReq(
+  json['title'] as String,
+  json['content'] as String,
+  type: json['type'] as String?,
+  courseId: json['courseId'] as String?,
+  data: (json['data'] as Map<String, dynamic>?)?.map(
+    (k, e) => MapEntry(k, e as String),
+  ),
+);
+
+Map<String, dynamic> _$CreateTestBroadcastNotificationReqToJson(
+  CreateTestBroadcastNotificationReq instance,
+) => <String, dynamic>{
+  'title': instance.title,
+  'content': instance.content,
+  'type': instance.type,
+  'courseId': instance.courseId,
+  'data': instance.data,
+};
+
 CreateNotificationTemplateReq _$CreateNotificationTemplateReqFromJson(
   Map<String, dynamic> json,
 ) => CreateNotificationTemplateReq(

@@ -1,3 +1,20 @@
+CourseFileReq _courseFileReqFromJsonElement(dynamic e) {
+  if (e is String) {
+    final path = e;
+    final filename = path.split('/').last;
+    return CourseFileReq(
+      originalName: filename,
+      filename: filename,
+      path: path,
+      url: '',
+      size: 0,
+      mimetype: 'application/octet-stream',
+      isExisting: true,
+    );
+  }
+  return CourseFileReq.fromJson(e as Map<String, dynamic>);
+}
+
 /// 重複規則類型 (僅用於本地計算，不需要 JSON 序列化)
 enum RecurrenceFrequency { weekly, biweekly, monthly }
 
@@ -102,9 +119,7 @@ class CreateCourseReq {
         json['name'] as String,
         json['overview'] as String,
         json['room'] as String,
-        (json['files'] as List<dynamic>)
-            .map((e) => CourseFileReq.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        (json['files'] as List<dynamic>).map(_courseFileReqFromJsonElement).toList(),
         json['schoolId'] as String,
         json['tutorId'] as String,
         (json['timestamps'] as List<dynamic>)
@@ -117,7 +132,7 @@ class CreateCourseReq {
         'name': name,
         'overview': overview,
         'room': room,
-        'files': files.map((e) => e.toJson()).toList(),
+        'files': files.map((e) => e.path).toList(),
         'schoolId': schoolId,
         'tutorId': tutorId,
         'timestamps': timestamps.map((e) => e.toJson()).toList(),
@@ -155,7 +170,7 @@ class UpdateCourseReq {
         overview: json['overview'] as String?,
         room: json['room'] as String?,
         files: (json['files'] as List<dynamic>?)
-            ?.map((e) => CourseFileReq.fromJson(e as Map<String, dynamic>))
+            ?.map(_courseFileReqFromJsonElement)
             .toList(),
         schoolId: json['schoolId'] as String?,
         tutorId: json['tutorId'] as String?,
@@ -169,7 +184,7 @@ class UpdateCourseReq {
         'name': name,
         'overview': overview,
         'room': room,
-        'files': files?.map((e) => e.toJson()).toList(),
+        'files': files?.map((e) => e.path).toList(),
         'schoolId': schoolId,
         'tutorId': tutorId,
         'timestamps': timestamps?.map((e) => e.toJson()).toList(),

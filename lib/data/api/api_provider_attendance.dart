@@ -14,6 +14,7 @@ class ApiProviderAttendance extends ApiProviderBase {
     String? schoolId,
     String? startDate,
     String? endDate,
+    bool? includingPast,
   }) async {
     final query = <String, dynamic>{
       if (page != null) 'page': page,
@@ -23,6 +24,7 @@ class ApiProviderAttendance extends ApiProviderBase {
       if (schoolId != null && schoolId.trim().isNotEmpty) 'schoolId': schoolId.trim(),
       if (startDate != null && startDate.trim().isNotEmpty) 'startDate': startDate.trim(),
       if (endDate != null && endDate.trim().isNotEmpty) 'endDate': endDate.trim(),
+      if (includingPast != null) 'includingPast': includingPast,
     };
 
     return await ApiProviderBase.get<Map<String, dynamic>>(

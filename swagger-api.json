@@ -76,13 +76,13 @@
           },
           "responses": {
             "200": {
-              "description": "Token 刷新成功"
+              "description": "Token refreshed successfully"
             },
             "401": {
-              "description": "Refresh Token 無效"
+              "description": "Invalid Refresh Token"
             }
           },
-          "summary": "刷新 Access Token",
+          "summary": "Refresh Access Token",
           "tags": [
             "Auth"
           ]
@@ -94,7 +94,7 @@
           "parameters": [],
           "responses": {
             "200": {
-              "description": "Token 有效"
+              "description": "Token is valid"
             }
           },
           "security": [
@@ -102,7 +102,7 @@
               "bearer": []
             }
           ],
-          "summary": "驗證 Token",
+          "summary": "Validate Token",
           "tags": [
             "Auth"
           ]
@@ -136,6 +136,87 @@
             }
           ],
           "summary": "Change Password (First Login)",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/forgot-password": {
+        "post": {
+          "operationId": "AuthController_forgotPassword",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Request processed"
+            }
+          },
+          "summary": "Forgot Password - Send reset email",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/verify-otp": {
+        "post": {
+          "operationId": "AuthController_verifyOtp",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOtpDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "OTP verified"
+            },
+            "400": {
+              "description": "Invalid or expired OTP"
+            }
+          },
+          "summary": "Verify OTP and get reset token",
+          "tags": [
+            "Auth"
+          ]
+        }
+      },
+      "/api/v1/auth/reset-password": {
+        "post": {
+          "operationId": "AuthController_resetPassword",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordWithResetTokenDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password reset successfully"
+            },
+            "400": {
+              "description": "Invalid or expired reset token"
+            }
+          },
+          "summary": "Reset password with reset token",
           "tags": [
             "Auth"
           ]
@@ -543,6 +624,61 @@
           ]
         }
       },
+      "/api/v1/user/{id}/force-reset-password": {
+        "post": {
+          "operationId": "UsersController_forceResetPassword",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "x-force-reset-key",
+              "in": "header",
+              "description": "Fixed header required for additional validation",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/MessageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Force Reset User Password (Fixed Header Only)",
+          "tags": [
+            "Users"
+          ]
+        }
+      },
       "/api/v1/files/upload": {
         "post": {
           "operationId": "FilesController_uploadFile",
@@ -560,7 +696,7 @@
                     "file": {
                       "type": "string",
                       "format": "binary",
-                      "description": "上傳檔案（鍵名 file）"
+                      "description": "File to upload (key: file)"
                     }
                   }
                 }
@@ -598,7 +734,7 @@
               "name": "0",
               "required": true,
               "in": "path",
-              "description": "文件路徑（例如：users/userId/filename）",
+              "description": "File path (e.g., users/userId/filename)",
               "schema": {
                 "type": "string"
               }
@@ -635,7 +771,7 @@
               "name": "0",
               "required": true,
               "in": "path",
-              "description": "文件路徑（例如：users/userId/filename）",
+              "description": "File path (e.g., users/userId/filename)",
               "schema": {
                 "type": "string"
               }
@@ -672,7 +808,7 @@
               "name": "0",
               "required": true,
               "in": "path",
-              "description": "文件路徑（例如：users/userId/filename）",
+              "description": "File path (e.g., users/userId/filename)",
               "schema": {
                 "type": "string"
               }
@@ -707,10 +843,10 @@
           "parameters": [],
           "responses": {
             "200": {
-              "description": "性能指標"
+              "description": "Performance metrics"
             }
           },
-          "summary": "系統性能指標",
+          "summary": "System performance metrics",
           "tags": [
             "System"
           ]
@@ -724,42 +860,42 @@
               "name": "endDate",
               "required": false,
               "in": "query",
-              "description": "結束日期",
+              "description": "End date",
               "schema": {}
             },
             {
               "name": "startDate",
               "required": false,
               "in": "query",
-              "description": "開始日期",
+              "description": "Start date",
               "schema": {}
             },
             {
               "name": "path",
               "required": false,
               "in": "query",
-              "description": "路徑",
+              "description": "Path",
               "schema": {}
             },
             {
               "name": "statusCode",
               "required": false,
               "in": "query",
-              "description": "狀態碼",
+              "description": "Status code",
               "schema": {}
             },
             {
               "name": "method",
               "required": false,
               "in": "query",
-              "description": "HTTP方法",
+              "description": "HTTP method",
               "schema": {}
             },
             {
               "name": "limit",
               "required": false,
               "in": "query",
-              "description": "每頁數量",
+              "description": "Items per page",
               "schema": {
                 "example": 50
               }
@@ -768,7 +904,7 @@
               "name": "page",
               "required": false,
               "in": "query",
-              "description": "頁數",
+              "description": "Page number",
               "schema": {
                 "example": 1
               }
@@ -776,7 +912,7 @@
           ],
           "responses": {
             "200": {
-              "description": "日誌列表"
+              "description": "Log list"
             }
           },
           "security": [
@@ -784,7 +920,7 @@
               "bearer": []
             }
           ],
-          "summary": "獲取系統日誌",
+          "summary": "Get system logs",
           "tags": [
             "System"
           ]
@@ -796,7 +932,7 @@
           "parameters": [],
           "responses": {
             "200": {
-              "description": "統計數據"
+              "description": "Statistics"
             }
           },
           "security": [
@@ -804,7 +940,7 @@
               "bearer": []
             }
           ],
-          "summary": "獲取系統統計數據",
+          "summary": "Get system statistics",
           "tags": [
             "System"
           ]
@@ -973,6 +1109,28 @@
               }
             }
           },
+          "tags": [
+            "Health"
+          ]
+        }
+      },
+      "/api/v1/health/time": {
+        "get": {
+          "operationId": "HealthController_getServerTime",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ServerTimeResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "summary": "Get current server time",
           "tags": [
             "Health"
           ]
@@ -1658,6 +1816,16 @@
                 "example": "2024-12-31",
                 "type": "string"
               }
+            },
+            {
+              "name": "includingPast",
+              "required": false,
+              "in": "query",
+              "description": "Including past",
+              "schema": {
+                "example": true,
+                "type": "boolean"
+              }
             }
           ],
           "responses": {
@@ -2282,6 +2450,43 @@
           ]
         }
       },
+      "/api/v1/notification/test/broadcast": {
+        "post": {
+          "operationId": "NotificationController_createTestBroadcastNotification",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTestBroadcastNotificationDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BroadcastNotificationResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Create a test notification and broadcast it to all devices",
+          "tags": [
+            "Notification"
+          ]
+        }
+      },
       "/api/v1/notification": {
         "get": {
           "operationId": "NotificationController_getNotifications",
@@ -2440,209 +2645,6 @@
           "summary": "Mark All Notifications as Read",
           "tags": [
             "Notification"
-          ]
-        }
-      },
-      "/api/v1/notification-template": {
-        "post": {
-          "operationId": "NotificationTemplateController_createTemplate",
-          "parameters": [],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateNotificationTemplateDto"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/NotificationTemplateResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "bearer": []
-            }
-          ],
-          "summary": "Create Notification Template",
-          "tags": [
-            "Notification Template"
-          ]
-        },
-        "get": {
-          "operationId": "NotificationTemplateController_getAllTemplates",
-          "parameters": [],
-          "responses": {
-            "200": {
-              "description": "",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/NotificationTemplateListResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "bearer": []
-            }
-          ],
-          "summary": "Get All Notification Templates",
-          "tags": [
-            "Notification Template"
-          ]
-        }
-      },
-      "/api/v1/notification-template/active": {
-        "get": {
-          "operationId": "NotificationTemplateController_getActiveTemplates",
-          "parameters": [],
-          "responses": {
-            "200": {
-              "description": "",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/NotificationTemplateListResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "bearer": []
-            }
-          ],
-          "summary": "Get Active Notification Templates",
-          "tags": [
-            "Notification Template"
-          ]
-        }
-      },
-      "/api/v1/notification-template/{id}": {
-        "get": {
-          "operationId": "NotificationTemplateController_getTemplateById",
-          "parameters": [
-            {
-              "name": "id",
-              "required": true,
-              "in": "path",
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/NotificationTemplateResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "bearer": []
-            }
-          ],
-          "summary": "Get Notification Template By Id",
-          "tags": [
-            "Notification Template"
-          ]
-        },
-        "patch": {
-          "operationId": "NotificationTemplateController_updateTemplate",
-          "parameters": [
-            {
-              "name": "id",
-              "required": true,
-              "in": "path",
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateNotificationTemplateDto"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/NotificationTemplateResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "bearer": []
-            }
-          ],
-          "summary": "Update Notification Template",
-          "tags": [
-            "Notification Template"
-          ]
-        },
-        "delete": {
-          "operationId": "NotificationTemplateController_deleteTemplate",
-          "parameters": [
-            {
-              "name": "id",
-              "required": true,
-              "in": "path",
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SuccessResponse"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "bearer": []
-            }
-          ],
-          "summary": "Delete Notification Template",
-          "tags": [
-            "Notification Template"
           ]
         }
       },
@@ -2885,17 +2887,17 @@
           "properties": {
             "username": {
               "type": "string",
-              "description": "使用者名稱或電子郵件（根據角色決定）",
+              "description": "Username or email (depends on role)",
               "example": "user@example.com"
             },
             "password": {
               "type": "string",
-              "description": "使用者密碼",
+              "description": "User password",
               "example": "P@ssw0rd"
             },
             "role": {
               "type": "string",
-              "description": "用戶角色 (tutor: 使用 username 登入, staff: 使用 email 登入)",
+              "description": "User role (tutor: login with username, staff: login with email)",
               "example": "tutor",
               "enum": [
                 "tutor",
@@ -2963,32 +2965,78 @@
             "newPassword"
           ]
         },
+        "ForgotPasswordDto": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "User email address",
+              "example": "user@example.com"
+            }
+          },
+          "required": [
+            "email"
+          ]
+        },
+        "VerifyOtpDto": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "User email address",
+              "example": "user@example.com"
+            },
+            "otp": {
+              "type": "string",
+              "description": "6-digit OTP code",
+              "example": "123456"
+            }
+          },
+          "required": [
+            "email",
+            "otp"
+          ]
+        },
+        "ResetPasswordWithResetTokenDto": {
+          "type": "object",
+          "properties": {
+            "resetToken": {
+              "type": "string",
+              "description": "Reset token received after OTP verification",
+              "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            },
+            "newPassword": {
+              "type": "string",
+              "description": "New password (minimum 6 characters)",
+              "example": "NewPassword123!"
+            }
+          },
+          "required": [
+            "resetToken",
+            "newPassword"
+          ]
+        },
         "CreateUserDto": {
           "type": "object",
           "properties": {
-            "username": {
-              "type": "string",
-              "description": "使用者名稱（導師必填）",
-              "example": "tutor123"
-            },
             "email": {
               "type": "string",
-              "description": "使用者電子郵件",
+              "description": "User email",
               "example": "user@example.com"
             },
             "password": {
               "type": "string",
-              "description": "使用者密碼 (至少 6 碼)",
+              "description": "User password (min 6 characters)",
               "example": "P@ssw0rd"
             },
             "name": {
               "type": "string",
-              "description": "使用者姓名",
+              "description": "User name",
               "example": "Leo Wu"
             },
             "role": {
               "type": "string",
-              "description": "用戶角色",
+              "description": "User role",
               "example": "staff",
               "enum": [
                 "tutor",
@@ -3007,44 +3055,44 @@
           "properties": {
             "_id": {
               "type": "string",
-              "description": "使用者ID",
+              "description": "User ID",
               "example": "652f1b9d2f1c4a6d8f0e1234"
             },
             "username": {
               "type": "string",
-              "description": "使用者名稱(僅 tutor 可能有)",
+              "description": "Username (only tutors may have one)",
               "example": "T999"
             },
             "email": {
               "type": "string",
-              "description": "電子郵件",
+              "description": "Email",
               "example": "admin@example.com"
             },
             "name": {
               "type": "string",
-              "description": "姓名",
+              "description": "Name",
               "example": "Admin"
             },
             "role": {
               "type": "string",
-              "description": "角色",
+              "description": "Role",
               "example": "staff"
             },
             "isActive": {
               "type": "boolean",
-              "description": "是否啟用",
+              "description": "Whether the user is active",
               "example": true
             },
             "createdAt": {
               "format": "date-time",
               "type": "string",
-              "description": "建立時間",
+              "description": "Created at",
               "example": "2025-01-01T00:00:00.000Z"
             },
             "updatedAt": {
               "format": "date-time",
               "type": "string",
-              "description": "更新時間",
+              "description": "Updated at",
               "example": "2025-01-02T12:34:56.000Z"
             }
           },
@@ -3064,7 +3112,7 @@
             },
             "total": {
               "type": "number",
-              "description": "符合條件的總筆數",
+              "description": "Total number of matching records",
               "example": 42
             }
           },
@@ -3083,17 +3131,17 @@
             },
             "password": {
               "type": "string",
-              "description": "新密碼 (至少 6 碼)",
+              "description": "New password (min 6 characters) Staff Only",
               "example": "N3wP@ssw0rd"
             },
             "name": {
               "type": "string",
-              "description": "姓名",
+              "description": "Name",
               "example": "New Name"
             },
             "avatar": {
               "type": "string",
-              "description": "頭像 URL",
+              "description": "Avatar URL",
               "example": "https://example.com/avatar.png"
             },
             "fcmToken": {
@@ -3103,7 +3151,7 @@
             },
             "mustChangePassword": {
               "type": "boolean",
-              "description": "是否必須更改密碼",
+              "description": "Whether password change is required",
               "example": false
             }
           }
@@ -3140,7 +3188,7 @@
           "properties": {
             "newPassword": {
               "type": "string",
-              "description": "新密碼 (至少 6 碼)",
+              "description": "New password (min 6 characters)",
               "example": "NewP@ssw0rd123"
             }
           },
@@ -3207,7 +3255,7 @@
           "properties": {
             "message": {
               "type": "string",
-              "example": "檔案上傳成功"
+              "example": "File uploaded successfully"
             },
             "file": {
               "$ref": "#/components/schemas/FileResponseDto"
@@ -3247,6 +3295,33 @@
             "expiresIn"
           ]
         },
+        "ServerTimeResponseDto": {
+          "type": "object",
+          "properties": {
+            "iso": {
+              "type": "string",
+              "example": "2026-03-27T18:15:30.000+08:00"
+            },
+            "unixMs": {
+              "type": "number",
+              "example": 1774606530000
+            },
+            "timezone": {
+              "type": "string",
+              "example": "Asia/Hong_Kong"
+            },
+            "timezoneOffsetMinutes": {
+              "type": "number",
+              "example": 480
+            }
+          },
+          "required": [
+            "iso",
+            "unixMs",
+            "timezone",
+            "timezoneOffsetMinutes"
+          ]
+        },
         "GpsDto": {
           "type": "object",
           "properties": {
@@ -3272,6 +3347,11 @@
               "description": "School Name",
               "example": "School A"
             },
+            "address": {
+              "type": "string",
+              "description": "School address",
+              "example": "30 Good Shepherd Street, Ho Man Tin, Kowloon"
+            },
             "gps": {
               "description": "GPS Coordinates",
               "example": {
@@ -3283,10 +3363,16 @@
                   "$ref": "#/components/schemas/GpsDto"
                 }
               ]
+            },
+            "maxDistanceMeters": {
+              "type": "number",
+              "description": "Max distance in meters for attendance",
+              "example": 100
             }
           },
           "required": [
             "name",
+            "address",
             "gps"
           ]
         },
@@ -3318,6 +3404,10 @@
               "type": "string",
               "example": "Hong Kong Metropolitan University"
             },
+            "address": {
+              "type": "string",
+              "example": "30 Good Shepherd Street, Ho Man Tin, Kowloon"
+            },
             "gps": {
               "$ref": "#/components/schemas/SchoolGpsDto"
             },
@@ -3336,6 +3426,7 @@
           },
           "required": [
             "name",
+            "address",
             "gps"
           ]
         },
@@ -3381,6 +3472,11 @@
               "description": "School Name",
               "example": "School A"
             },
+            "address": {
+              "type": "string",
+              "description": "School address",
+              "example": "30 Good Shepherd Street, Ho Man Tin, Kowloon"
+            },
             "gps": {
               "description": "GPS Coordinates",
               "example": {
@@ -3392,6 +3488,11 @@
                   "$ref": "#/components/schemas/GpsDto"
                 }
               ]
+            },
+            "maxDistanceMeters": {
+              "type": "number",
+              "description": "Max distance in meters for attendance",
+              "example": 100
             }
           }
         },
@@ -3415,6 +3516,12 @@
         "CreateCourseDto": {
           "type": "object",
           "properties": {
+            "subjectShortName": {
+              "type": "string",
+              "description": "Subject short name for course code (max 4 chars), e.g. CS, MATH",
+              "example": "CS",
+              "maxLength": 4
+            },
             "name": {
               "type": "string",
               "description": "course name",
@@ -3482,6 +3589,7 @@
             }
           },
           "required": [
+            "subjectShortName",
             "name",
             "overview",
             "room",
@@ -3535,6 +3643,11 @@
               "type": "string",
               "example": "507f1f77bcf86cd799439011"
             },
+            "courseCode": {
+              "type": "string",
+              "example": "CS000001",
+              "description": "Course code (subject short name + 6-digit auto-increment)"
+            },
             "name": {
               "type": "string",
               "example": "Course Name"
@@ -3587,6 +3700,7 @@
             }
           },
           "required": [
+            "courseCode",
             "name",
             "overview",
             "room",
@@ -3633,6 +3747,12 @@
         "UpdateCourseDto": {
           "type": "object",
           "properties": {
+            "subjectShortName": {
+              "type": "string",
+              "description": "Subject short name for course code (max 4 chars), e.g. CS, MATH",
+              "example": "CS",
+              "maxLength": 4
+            },
             "name": {
               "type": "string",
               "description": "course name",
@@ -3746,10 +3866,6 @@
               "type": "number",
               "example": 0
             },
-            "checked": {
-              "type": "boolean",
-              "example": false
-            },
             "tutorId": {
               "type": "string",
               "example": "507f1f77bcf86cd799439013"
@@ -3762,9 +3878,19 @@
               "type": "string",
               "example": "https://example.com/photo.jpg"
             },
-            "checkInTime": {
+            "arrivedTime": {
               "type": "string",
               "example": "2026-01-20T13:44:45.000Z"
+            },
+            "status": {
+              "type": "string",
+              "example": "pending",
+              "enum": [
+                "arrived",
+                "late",
+                "pending",
+                "absent"
+              ]
             },
             "isDeleted": {
               "type": "boolean",
@@ -3784,7 +3910,6 @@
             "courseId",
             "timestamp",
             "timestamp_index",
-            "checked",
             "tutorId",
             "schoolId",
             "isDeleted"
@@ -4025,6 +4150,94 @@
             "fcmToken"
           ]
         },
+        "CreateTestBroadcastNotificationDto": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Notification title",
+              "example": "System Maintenance"
+            },
+            "content": {
+              "type": "string",
+              "description": "Notification content",
+              "example": "This is a test push notification for all devices."
+            },
+            "type": {
+              "type": "string",
+              "description": "Notification type",
+              "enum": [
+                "reminder",
+                "leave_approved",
+                "leave_rejected",
+                "other"
+              ],
+              "default": "other"
+            },
+            "courseId": {
+              "type": "string",
+              "description": "Optional course ID stored with the notification",
+              "example": "660f1c2e7b9f5b2d77b44711"
+            },
+            "data": {
+              "type": "object",
+              "description": "Additional FCM data payload",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "example": {
+                "screen": "notification-test",
+                "source": "manual-test"
+              }
+            }
+          },
+          "required": [
+            "title",
+            "content"
+          ]
+        },
+        "BroadcastNotificationResponseDto": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "example": true
+            },
+            "message": {
+              "type": "string",
+              "example": "Test notification created and broadcast completed"
+            },
+            "totalUsers": {
+              "type": "number",
+              "example": 12
+            },
+            "notificationsCreated": {
+              "type": "number",
+              "example": 12
+            },
+            "targetDevices": {
+              "type": "number",
+              "example": 10
+            },
+            "successCount": {
+              "type": "number",
+              "example": 10
+            },
+            "failureCount": {
+              "type": "number",
+              "example": 0
+            }
+          },
+          "required": [
+            "success",
+            "message",
+            "totalUsers",
+            "notificationsCreated",
+            "targetDevices",
+            "successCount",
+            "failureCount"
+          ]
+        },
         "NotificationResponseDto": {
           "type": "object",
           "properties": {
@@ -4124,142 +4337,6 @@
             "count"
           ]
         },
-        "CreateNotificationTemplateDto": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Template name",
-              "example": "Course Reminder"
-            },
-            "type": {
-              "type": "string",
-              "description": "Notification type",
-              "example": "reminder",
-              "enum": [
-                "reminder",
-                "leave_approved",
-                "leave_rejected",
-                "other"
-              ]
-            },
-            "title": {
-              "type": "string",
-              "description": "Notification title template",
-              "example": "課程提醒：{{courseName}}"
-            },
-            "content": {
-              "type": "string",
-              "description": "Notification content template",
-              "example": "親愛的 {{tutorName}}，您有一個課程將在 24 小時後開始：{{courseName}}"
-            },
-            "isActive": {
-              "type": "boolean",
-              "description": "Is template active",
-              "example": true
-            }
-          },
-          "required": [
-            "name",
-            "type",
-            "title",
-            "content"
-          ]
-        },
-        "NotificationTemplateResponseDto": {
-          "type": "object",
-          "properties": {
-            "_id": {
-              "type": "string",
-              "example": "507f1f77bcf86cd799439011"
-            },
-            "name": {
-              "type": "string",
-              "example": "Course Reminder"
-            },
-            "type": {
-              "type": "string",
-              "example": "reminder"
-            },
-            "title": {
-              "type": "string",
-              "example": "Reminder: {{courseName}}"
-            },
-            "content": {
-              "type": "string",
-              "example": "Your class is tomorrow at {{courseTime}}"
-            },
-            "isActive": {
-              "type": "boolean",
-              "example": true
-            },
-            "createdAt": {
-              "type": "string",
-              "example": "2026-01-20T13:44:45.000Z"
-            },
-            "updatedAt": {
-              "type": "string",
-              "example": "2026-01-20T13:44:45.000Z"
-            }
-          },
-          "required": [
-            "name",
-            "type",
-            "title",
-            "content",
-            "isActive"
-          ]
-        },
-        "NotificationTemplateListResponseDto": {
-          "type": "object",
-          "properties": {
-            "items": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/NotificationTemplateResponseDto"
-              }
-            }
-          },
-          "required": [
-            "items"
-          ]
-        },
-        "UpdateNotificationTemplateDto": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Template name",
-              "example": "Course Reminder"
-            },
-            "type": {
-              "type": "string",
-              "description": "Notification type",
-              "example": "reminder",
-              "enum": [
-                "reminder",
-                "leave_approved",
-                "leave_rejected",
-                "other"
-              ]
-            },
-            "title": {
-              "type": "string",
-              "description": "Notification title template",
-              "example": "課程提醒：{{courseName}}"
-            },
-            "content": {
-              "type": "string",
-              "description": "Notification content template",
-              "example": "親愛的 {{tutorName}}，您有一個課程將在 24 小時後開始：{{courseName}}"
-            },
-            "isActive": {
-              "type": "boolean",
-              "description": "Is template active",
-              "example": true
-            }
-          }
-        },
         "StatisticsAttendanceResponseDto": {
           "type": "object",
           "properties": {
@@ -4269,10 +4346,10 @@
                 "total": {
                   "type": "number"
                 },
-                "checked": {
+                "arrivedOrLate": {
                   "type": "number"
                 },
-                "unchecked": {
+                "pendingOrAbsent": {
                   "type": "number"
                 },
                 "attendanceRate": {

@@ -8,6 +8,9 @@ class MrSteamAPIs {
   static const String logout = '$v1/auth/logout';
   static const String validateToken = '$v1/auth/validate';
   static const String changePassword = '$v1/auth/change-password';
+  static const String forgotPassword = '$v1/auth/forgot-password';
+  static const String verifyOtp = '$v1/auth/verify-otp';
+  static const String resetPasswordWithToken = '$v1/auth/reset-password';
 
   // Users
   static const String users = '$v1/users';
@@ -19,6 +22,9 @@ class MrSteamAPIs {
   static String userActive(String id) => '$v1/$id/active';
 
   static String userResetPassword(String id) => '$v1/user/$id/reset-password';
+
+  static String userForceResetPassword(String id) =>
+      '$v1/user/$id/force-reset-password';
 
   // Files
   static const String uploadFile = '$v1/files/upload';
@@ -36,6 +42,7 @@ class MrSteamAPIs {
 
   // Health
   static const String health = '$v1/health';
+  static const String healthTime = '$v1/health/time';
 
   // School
   static const String school = '$v1/school';
@@ -73,6 +80,8 @@ class MrSteamAPIs {
 
   // Notification
   static const String registerDeviceToken = '$v1/notification/register-device';
+  static const String notificationTestBroadcast =
+      '$v1/notification/test/broadcast';
   static const String notification = '$v1/notification';
   static const String notificationUnreadCount = '$v1/notification/unread-count';
 

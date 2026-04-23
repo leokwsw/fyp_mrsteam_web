@@ -19,9 +19,7 @@ CourseRes _$CourseResFromJson(Map<String, dynamic> json) => CourseRes(
   _parseFiles(json['files']),
   json['schoolId'] as String,
   json['tutorId'] as String,
-  (json['timestamps'] as List<dynamic>)
-      .map((e) => CourseTimestampRes.fromJson(e as Map<String, dynamic>))
-      .toList(),
+  _parseCourseTimestamps(json['timestamps']),
   id: json['_id'] as String?,
   courseCode: CourseRes._readCourseCode(json, 'courseCode') == null
       ? ''

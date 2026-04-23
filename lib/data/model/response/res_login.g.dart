@@ -23,3 +23,14 @@ Map<String, dynamic> _$LoginResToJson(LoginRes instance) => <String, dynamic>{
   'user': instance.user,
   'message': instance.message,
 };
+
+VerifyOtpRes _$VerifyOtpResFromJson(Map<String, dynamic> json) => VerifyOtpRes(
+  resetToken: VerifyOtpRes._readResetToken(json, 'resetToken') as String?,
+  message: json['message'] as String?,
+);
+
+Map<String, dynamic> _$VerifyOtpResToJson(VerifyOtpRes instance) =>
+    <String, dynamic>{
+      'resetToken': instance.resetToken,
+      'message': instance.message,
+    };

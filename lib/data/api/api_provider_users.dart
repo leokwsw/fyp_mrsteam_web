@@ -91,4 +91,19 @@ class ApiProviderUsers extends ApiProviderBase {
       data: req.toJson(),
     ).then((response) => MessageRes.fromJson(response.data ?? {}));
   }
+
+  /// 需帶後端要求的 `x-force-reset-key` 標頭。
+  Future<MessageRes> forceResetPassword(
+    String id,
+    ResetPasswordReq req, {
+    required String forceResetKey,
+  }) async {
+    return await ApiProviderBase.post<Map<String, dynamic>>(
+      MrSteamAPIs.userForceResetPassword(id),
+      data: req.toJson(),
+      options: Options(
+        headers: <String, dynamic>{'x-force-reset-key': forceResetKey},
+      ),
+    ).then((response) => MessageRes.fromJson(response.data ?? {}));
+  }
 }

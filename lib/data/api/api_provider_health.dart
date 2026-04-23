@@ -8,4 +8,10 @@ class ApiProviderHealth extends ApiProviderBase {
       MrSteamAPIs.health,
     ).then((response) => HealthRes.fromJson(response.data ?? {}));
   }
+
+  Future<ServerTimeRes> getServerTime() async {
+    return await ApiProviderBase.get<Map<String, dynamic>>(
+      MrSteamAPIs.healthTime,
+    ).then((response) => ServerTimeRes.fromJson(response.data ?? {}));
+  }
 }

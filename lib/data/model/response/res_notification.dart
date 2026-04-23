@@ -71,3 +71,32 @@ class UnreadCountRes {
   static fromJsonModel(Map<String, dynamic> json) =>
       UnreadCountRes.fromJson(json);
 }
+
+@JsonSerializable()
+class BroadcastNotificationRes {
+  final bool success;
+  final String message;
+  final int totalUsers;
+  final int notificationsCreated;
+  final int targetDevices;
+  final int successCount;
+  final int failureCount;
+
+  BroadcastNotificationRes(
+    this.success,
+    this.message,
+    this.totalUsers,
+    this.notificationsCreated,
+    this.targetDevices,
+    this.successCount,
+    this.failureCount,
+  );
+
+  factory BroadcastNotificationRes.fromJson(Map<String, dynamic> json) =>
+      _$BroadcastNotificationResFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BroadcastNotificationResToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      BroadcastNotificationRes.fromJson(json);
+}

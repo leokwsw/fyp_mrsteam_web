@@ -18,6 +18,34 @@ class RegisterDeviceTokenReq {
 }
 
 @JsonSerializable()
+class CreateTestBroadcastNotificationReq {
+  final String title;
+  final String content;
+  final String? type;
+  final String? courseId;
+  final Map<String, String>? data;
+
+  CreateTestBroadcastNotificationReq(
+    this.title,
+    this.content, {
+    this.type,
+    this.courseId,
+    this.data,
+  });
+
+  factory CreateTestBroadcastNotificationReq.fromJson(
+    Map<String, dynamic> json,
+  ) =>
+      _$CreateTestBroadcastNotificationReqFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$CreateTestBroadcastNotificationReqToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      CreateTestBroadcastNotificationReq.fromJson(json);
+}
+
+@JsonSerializable()
 class CreateNotificationTemplateReq {
   final String name;
   final String type;
