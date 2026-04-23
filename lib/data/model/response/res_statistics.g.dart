@@ -10,8 +10,8 @@ StatisticsAttendanceSummaryRes _$StatisticsAttendanceSummaryResFromJson(
   Map<String, dynamic> json,
 ) => StatisticsAttendanceSummaryRes(
   json['total'] as num,
-  json['checked'] as num,
-  json['unchecked'] as num,
+  json['arrivedOrLate'] as num,
+  json['pendingOrAbsent'] as num,
   json['attendanceRate'] as num,
 );
 
@@ -19,8 +19,8 @@ Map<String, dynamic> _$StatisticsAttendanceSummaryResToJson(
   StatisticsAttendanceSummaryRes instance,
 ) => <String, dynamic>{
   'total': instance.total,
-  'checked': instance.checked,
-  'unchecked': instance.unchecked,
+  'arrivedOrLate': instance.arrivedOrLate,
+  'pendingOrAbsent': instance.pendingOrAbsent,
   'attendanceRate': instance.attendanceRate,
 };
 

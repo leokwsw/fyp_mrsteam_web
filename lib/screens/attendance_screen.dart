@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:html' as html;
 import 'package:excel/excel.dart' show Excel, TextCellValue;
 import 'package:flutter/material.dart';
+import 'package:image_network/image_network.dart';
 import 'package:intl/intl.dart';
 
 import '../constants/colors.dart';
@@ -57,10 +58,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool isExporting = false;
   String? errorMessage;
 
-  String get _monthStartDate =>
-      DateFormat('yyyy-MM-dd').format(selectedMonth);
-  String get _monthEndDate =>
-      DateFormat('yyyy-MM-dd').format(DateTime(selectedMonth.year, selectedMonth.month + 1, 1));
+  String get _monthStartDate => DateFormat('yyyy-MM-dd').format(selectedMonth);
+  String get _monthEndDate => DateFormat(
+    'yyyy-MM-dd',
+  ).format(DateTime(selectedMonth.year, selectedMonth.month + 1, 1));
 
   @override
   void initState() {
@@ -75,7 +76,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       data: Theme.of(context).copyWith(
         canvasColor: Colors.white, // dropdown popup background
         splashColor: Colors.transparent,
-        highlightColor: Colors.transparent, // remove default purple press highlight
+        highlightColor:
+            Colors.transparent, // remove default purple press highlight
         hoverColor: const Color(0xFFF5F5F5), // subtle hover
         focusColor: Colors.transparent,
       ),
@@ -138,10 +140,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       if (selectedTutorId != null && !tutorsMap.containsKey(selectedTutorId)) {
         selectedTutorId = null;
       }
-      if (selectedCourseId != null && !coursesMap.containsKey(selectedCourseId)) {
+      if (selectedCourseId != null &&
+          !coursesMap.containsKey(selectedCourseId)) {
         selectedCourseId = null;
       }
-      if (selectedSchoolId != null && !schoolsMap.containsKey(selectedSchoolId)) {
+      if (selectedSchoolId != null &&
+          !schoolsMap.containsKey(selectedSchoolId)) {
         selectedSchoolId = null;
       }
 
@@ -356,7 +360,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   String _toCsv(List<List<String>> rows) {
     String esc(String v) {
       final needQuote =
-          v.contains(',') || v.contains('"') || v.contains('\n') || v.contains('\r');
+          v.contains(',') ||
+          v.contains('"') ||
+          v.contains('\n') ||
+          v.contains('\r');
       final safe = v.replaceAll('"', '""');
       return needQuote ? '"$safe"' : safe;
     }
@@ -416,6 +423,54 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
     );
   }
+  
+  void _showPhotoDialog(String photoUrl) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        child: SizedBox(
+          width: 720,
+          height: 720,
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: InteractiveViewer(
+                    child: ImageNetwork(
+                      image: photoUrl,
+                      width: 680,
+                      height: 620,
+                      duration: 0,
+                      curve: Curves.linear,
+                      fitAndroidIos: BoxFit.contain,
+                      fitWeb: BoxFitWeb.contain,
+                      onLoading: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      onError: Center(
+                        child: Text('Failed to load image\n$photoUrl'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 12, 12),
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   String _getStatusFromAttendance(AttendanceRes attendance) {
     if (!attendance.checked) {
@@ -471,7 +526,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   DateTime _epochMsToLocal(num ms) {
-    return DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true).toLocal();
+    return DateTime.fromMillisecondsSinceEpoch(
+      ms.toInt(),
+      isUtc: true,
+    ).toLocal();
   }
 
   DateTime? _isoToLocal(String? iso) {
@@ -527,8 +585,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return months[month - 1];
   }
@@ -546,10 +614,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             children: [
               const Text(
                 'Tutor Attendance Records',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 24),
 
@@ -563,7 +628,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 },
                 decoration: InputDecoration(
                   hintText: 'Search',
-                  prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: AppColors.textSecondary,
+                  ),
                   filled: true,
                   fillColor: AppColors.inputBackground,
                   border: OutlineInputBorder(
@@ -578,8 +646,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: AppColors.primary, width: 2),
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -607,7 +677,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 children: [
                   Text(
                     '${_getMonthName(selectedMonth.month)} ${selectedMonth.year}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   IconButton(
@@ -627,7 +700,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     label: const Text('This Month'),
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                   ),
                 ],
@@ -648,11 +724,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     padding: const EdgeInsets.all(40.0),
                     child: Column(
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           'Error loading attendance',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -660,7 +743,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           style: TextStyle(color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+                        ElevatedButton(
+                          onPressed: _loadData,
+                          child: const Text('Retry'),
+                        ),
                       ],
                     ),
                   ),
@@ -697,8 +783,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -721,8 +808,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildTutorDropdown() {
     final validTutorIds = tutorOptions.map((t) => t.id).toSet();
-    final currentValue = (selectedTutorId != null &&
-            validTutorIds.contains(selectedTutorId))
+    final currentValue =
+        (selectedTutorId != null && validTutorIds.contains(selectedTutorId))
         ? selectedTutorId
         : null;
 
@@ -773,8 +860,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildCourseDropdown() {
     final validCourseIds = courseOptions.map((c) => c.id).toSet();
-    final currentValue = (selectedCourseId != null &&
-            validCourseIds.contains(selectedCourseId))
+    final currentValue =
+        (selectedCourseId != null && validCourseIds.contains(selectedCourseId))
         ? selectedCourseId
         : null;
 
@@ -827,8 +914,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildSchoolDropdown() {
     final validSchoolIds = schoolOptions.map((s) => s.id).toSet();
-    final currentValue = (selectedSchoolId != null &&
-            validSchoolIds.contains(selectedSchoolId))
+    final currentValue =
+        (selectedSchoolId != null && validSchoolIds.contains(selectedSchoolId))
         ? selectedSchoolId
         : null;
 
@@ -909,8 +996,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final validStatuses = {'Present', 'Absent', 'Late', 'Pending'};
     final currentValue =
         (selectedStatus != null && validStatuses.contains(selectedStatus))
-            ? selectedStatus
-            : null;
+        ? selectedStatus
+        : null;
 
     return SizedBox(
       width: 180,
@@ -943,10 +1030,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   value: 'Absent',
                   child: Text('Absent'),
                 ),
-                DropdownMenuItem<String?>(
-                  value: 'Late',
-                  child: Text('Late'),
-                ),
+                DropdownMenuItem<String?>(value: 'Late', child: Text('Late')),
                 DropdownMenuItem<String?>(
                   value: 'Pending',
                   child: Text('Pending'),
@@ -1007,9 +1091,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Expanded(flex: 2, child: Text('Tutor', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('Class', style: _headerStyle())),
                 Expanded(flex: 2, child: Text('School', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Scheduled Time', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Check-in Time', style: _headerStyle())),
+                Expanded(
+                  flex: 2,
+                  child: Text('Scheduled Time', style: _headerStyle()),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text('Check-in Time', style: _headerStyle()),
+                ),
                 Expanded(flex: 2, child: Text('Status', style: _headerStyle())),
+                Expanded(flex: 1, child: Text('Photo', style: _headerStyle())),
               ],
             ),
           ),
@@ -1030,17 +1121,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border:
-            Border(bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5))),
+        border: Border(
+          bottom: BorderSide(color: AppColors.cardBorder.withOpacity(0.5)),
+        ),
       ),
       child: Row(
         children: [
           Expanded(
             flex: 2,
-            child: Text(
-              tutor?.name ?? attendance.tutorId,
-              style: _cellStyle(),
-            ),
+            child: Text(tutor?.name ?? attendance.tutorId, style: _cellStyle()),
           ),
           Expanded(
             flex: 2,
@@ -1077,6 +1166,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               child: StatusBadge(text: status, type: statusType),
             ),
           ),
+          Expanded(
+            flex: 1,
+            child: Align(
+              alignment: Alignment.center,
+              child: ((attendance.photoUrl?.trim().isNotEmpty) ?? false)
+                  ? IconButton(
+                      tooltip: 'View Photo',
+                      icon: const Icon(Icons.photo, size: 20),
+                      onPressed: () =>
+                          _showPhotoDialog(attendance.photoUrl!.trim()),
+                    )
+                  : const Text('--'),
+            ),
+          ),
         ],
       ),
     );
@@ -1091,10 +1194,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   TextStyle _cellStyle() {
-    return TextStyle(
-      fontSize: 14,
-      color: AppColors.textPrimary,
-    );
+    return TextStyle(fontSize: 14, color: AppColors.textPrimary);
   }
 
   @override
@@ -1109,7 +1209,7 @@ class CreateSchoolDialog extends StatefulWidget {
   final Function(SchoolRes) onSchoolCreated;
 
   const CreateSchoolDialog({Key? key, required this.onSchoolCreated})
-      : super(key: key);
+    : super(key: key);
 
   @override
   State<CreateSchoolDialog> createState() => _CreateSchoolDialogState();
@@ -1133,7 +1233,8 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     final lat = double.tryParse(_latController.text.trim());
     final long = double.tryParse(_longController.text.trim());
 
-    if (_latController.text.trim().isNotEmpty || _longController.text.trim().isNotEmpty) {
+    if (_latController.text.trim().isNotEmpty ||
+        _longController.text.trim().isNotEmpty) {
       if (lat == null || long == null) {
         setState(() => errorMessage = 'Please enter valid GPS coordinates');
         return;
@@ -1194,7 +1295,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -1212,7 +1315,11 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -1273,8 +1380,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _latController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Latitude',
                       filled: true,
@@ -1289,7 +1397,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -1298,8 +1409,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 Expanded(
                   child: TextField(
                     controller: _longController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Longitude',
                       filled: true,
@@ -1314,7 +1426,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -1336,7 +1451,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                   width: 120,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppColors.textPrimary,
@@ -1348,7 +1465,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -1372,14 +1492,17 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
                             'Create',
-                            style:
-                                TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                   ),
                 ),

@@ -33,3 +33,51 @@ class ChangePasswordReq {
   static fromJsonModel(Map<String, dynamic> json) =>
       ChangePasswordReq.fromJson(json);
 }
+
+@JsonSerializable()
+class ForgotPasswordReq {
+  final String email;
+
+  ForgotPasswordReq(this.email);
+
+  factory ForgotPasswordReq.fromJson(Map<String, dynamic> json) =>
+      _$ForgotPasswordReqFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ForgotPasswordReqToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      ForgotPasswordReq.fromJson(json);
+}
+
+@JsonSerializable()
+class VerifyOtpReq {
+  final String email;
+  final String otp;
+
+  VerifyOtpReq(this.email, this.otp);
+
+  factory VerifyOtpReq.fromJson(Map<String, dynamic> json) =>
+      _$VerifyOtpReqFromJson(json);
+
+  Map<String, dynamic> toJson() => _$VerifyOtpReqToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      VerifyOtpReq.fromJson(json);
+}
+
+@JsonSerializable()
+class ResetPasswordWithResetTokenReq {
+  final String resetToken;
+  final String newPassword;
+
+  ResetPasswordWithResetTokenReq(this.resetToken, this.newPassword);
+
+  factory ResetPasswordWithResetTokenReq.fromJson(Map<String, dynamic> json) =>
+      _$ResetPasswordWithResetTokenReqFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$ResetPasswordWithResetTokenReqToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      ResetPasswordWithResetTokenReq.fromJson(json);
+}

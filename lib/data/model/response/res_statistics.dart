@@ -5,14 +5,14 @@ part 'res_statistics.g.dart';
 @JsonSerializable()
 class StatisticsAttendanceSummaryRes {
   final num total;
-  final num checked;
-  final num unchecked;
+  final num arrivedOrLate;
+  final num pendingOrAbsent;
   final num attendanceRate;
 
   StatisticsAttendanceSummaryRes(
     this.total,
-    this.checked,
-    this.unchecked,
+    this.arrivedOrLate,
+    this.pendingOrAbsent,
     this.attendanceRate,
   );
 

@@ -1,12 +1,29 @@
-/// 重複規則類型 (僅用於本地計算，不需要 JSON 序列化)
+CourseFileReq _courseFileReqFromJsonElement(dynamic e) {
+  if (e is String) {
+    final path = e;
+    final filename = path.split('/').last;
+    return CourseFileReq(
+      originalName: filename,
+      filename: filename,
+      path: path,
+      url: '',
+      size: 0,
+      mimetype: 'application/octet-stream',
+      isExisting: true,
+    );
+  }
+  return CourseFileReq.fromJson(e as Map<String, dynamic>);
+}
+
+/// Recurrence rule type (local calculation only, no JSON serialization needed).
 enum RecurrenceFrequency { weekly, biweekly, monthly }
 
-/// 重複規則 - 僅用於本地生成時間戳，不需要 JSON 序列化
+/// Recurrence rule - used only to generate local timestamps, no JSON serialization needed.
 class RecurrenceRuleReq {
   final RecurrenceFrequency frequency;
-  final int interval; // 每 X 週/月
-  final DateTime? endDate; // 重複結束日期
-  final int? occurrenceCount; // 或重複次數
+  final int interval; // Every X weeks/months
+  final DateTime? endDate; // Recurrence end date
+  final int? occurrenceCount; // Or recurrence count
 
   RecurrenceRuleReq({
     required this.frequency,
@@ -84,7 +101,7 @@ class CreateCourseReq {
   final String schoolId;
   final String tutorId;
   final List<CourseTimestampReq> timestamps;
-  final String subjectShortName; // 科目代碼（必填，最多 4 字符）
+  final String subjectShortName; // Subject code (required, max 4 chars)
 
   CreateCourseReq(
     this.name,
@@ -102,9 +119,7 @@ class CreateCourseReq {
         json['name'] as String,
         json['overview'] as String,
         json['room'] as String,
-        (json['files'] as List<dynamic>)
-            .map((e) => CourseFileReq.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        (json['files'] as List<dynamic>).map(_courseFileReqFromJsonElement).toList(),
         json['schoolId'] as String,
         json['tutorId'] as String,
         (json['timestamps'] as List<dynamic>)
@@ -117,7 +132,7 @@ class CreateCourseReq {
         'name': name,
         'overview': overview,
         'room': room,
-        'files': files.map((e) => e.toJson()).toList(),
+        'files': files.map((e) => e.path).toList(),
         'schoolId': schoolId,
         'tutorId': tutorId,
         'timestamps': timestamps.map((e) => e.toJson()).toList(),
@@ -155,7 +170,7 @@ class UpdateCourseReq {
         overview: json['overview'] as String?,
         room: json['room'] as String?,
         files: (json['files'] as List<dynamic>?)
-            ?.map((e) => CourseFileReq.fromJson(e as Map<String, dynamic>))
+            ?.map(_courseFileReqFromJsonElement)
             .toList(),
         schoolId: json['schoolId'] as String?,
         tutorId: json['tutorId'] as String?,
@@ -169,7 +184,7 @@ class UpdateCourseReq {
         'name': name,
         'overview': overview,
         'room': room,
-        'files': files?.map((e) => e.toJson()).toList(),
+        'files': files?.map((e) => e.path).toList(),
         'schoolId': schoolId,
         'tutorId': tutorId,
         'timestamps': timestamps?.map((e) => e.toJson()).toList(),
@@ -180,7 +195,7 @@ class UpdateCourseReq {
       UpdateCourseReq.fromJson(json);
 }
 
-/// 根據重複規則生成多個時間戳
+/// Generate multiple timestamps based on recurrence rules.
 List<CourseTimestampReq> generateRecurrenceTimestamps({
   required DateTime startDateTime,
   required DateTime endDateTime,
@@ -196,19 +211,19 @@ List<CourseTimestampReq> generateRecurrenceTimestamps({
   int occurrences = 0;
 
   while (true) {
-    // 添加當前時間戳
+    // Add current timestamp.
     timestamps.add(CourseTimestampReq(
       currentStart.millisecondsSinceEpoch,
       currentEnd.millisecondsSinceEpoch,
     ));
     occurrences++;
 
-    // 檢查是否達到指定次數
+    // Check whether target occurrence count is reached.
     if (occurrenceCount != null && occurrences >= occurrenceCount) {
       break;
     }
 
-    // 計算下一次時間
+    // Calculate next occurrence.
     switch (frequency) {
       case RecurrenceFrequency.weekly:
         currentStart = currentStart.add(Duration(days: 7 * interval));
@@ -219,7 +234,7 @@ List<CourseTimestampReq> generateRecurrenceTimestamps({
         currentEnd = currentEnd.add(Duration(days: 14 * interval));
         break;
       case RecurrenceFrequency.monthly:
-        // 月份相加需要特殊處理
+        // Month increment needs special handling.
         final nextMonth = currentStart.month + interval;
         final year = currentStart.year + (nextMonth - 1) ~/ 12;
         final month = ((nextMonth - 1) % 12) + 1;
@@ -240,12 +255,12 @@ List<CourseTimestampReq> generateRecurrenceTimestamps({
         break;
     }
 
-    // 檢查是否超過結束日期
+    // Check whether end date is exceeded.
     if (endDate != null && currentStart.isAfter(endDate)) {
       break;
     }
 
-    // 安全限制：最多生成 100 個實例
+    // Safety cap: generate at most 100 instances.
     if (occurrences >= 100) {
       break;
     }

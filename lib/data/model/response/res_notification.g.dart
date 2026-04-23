@@ -60,3 +60,27 @@ UnreadCountRes _$UnreadCountResFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$UnreadCountResToJson(UnreadCountRes instance) =>
     <String, dynamic>{'count': instance.count};
+
+BroadcastNotificationRes _$BroadcastNotificationResFromJson(
+  Map<String, dynamic> json,
+) => BroadcastNotificationRes(
+  json['success'] as bool,
+  json['message'] as String,
+  (json['totalUsers'] as num).toInt(),
+  (json['notificationsCreated'] as num).toInt(),
+  (json['targetDevices'] as num).toInt(),
+  (json['successCount'] as num).toInt(),
+  (json['failureCount'] as num).toInt(),
+);
+
+Map<String, dynamic> _$BroadcastNotificationResToJson(
+  BroadcastNotificationRes instance,
+) => <String, dynamic>{
+  'success': instance.success,
+  'message': instance.message,
+  'totalUsers': instance.totalUsers,
+  'notificationsCreated': instance.notificationsCreated,
+  'targetDevices': instance.targetDevices,
+  'successCount': instance.successCount,
+  'failureCount': instance.failureCount,
+};

@@ -217,7 +217,7 @@ class ApiProviderBase {
   }
 
   static String _firstErrorMessage(dynamic data) {
-    // 後端 validation 可能是 { errors: { email: ["..."] } }
+    // Backend validation may return { errors: { email: ["..."] } }
     try {
       if (data is Map && data['errors'] is Map) {
         final first = (data['errors'] as Map).values.first;

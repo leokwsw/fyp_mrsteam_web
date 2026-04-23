@@ -22,7 +22,7 @@ import '../data/model/response/res_user.dart';
 import '../services/places_search_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// 通用表单样式
+/// Shared form styles.
 /// ─────────────────────────────────────────────────────────────────────────
 class FormUi {
   static TextStyle labelStyle = const TextStyle(
@@ -113,7 +113,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   DateTime? endDateTime;
   DateTime? recurrenceEndDate;
 
-  // 重複規則
+  // Recurrence rules
   bool isRecurring = false;
   RecurrenceFrequency? selectedFrequency;
   int recurrenceInterval = 1;
@@ -285,7 +285,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     };
   }
 
-  /// 上傳文件
+  /// Upload files.
   Future<void> _uploadFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -632,7 +632,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     );
   }
 
-  /// 统一日期+时间选择流程（白底 + 自动主色）
+  /// Unified date/time picker flow (white background + automatic primary color).
   Future<DateTime?> _pickDateTime({
     DateTime? initialValue,
     required DateTime firstDate,

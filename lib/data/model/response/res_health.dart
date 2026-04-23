@@ -18,3 +18,26 @@ class HealthRes {
 
   static fromJsonModel(Map<String, dynamic> json) => HealthRes.fromJson(json);
 }
+
+@JsonSerializable()
+class ServerTimeRes {
+  final String iso;
+  final num unixMs;
+  final String timezone;
+  final num timezoneOffsetMinutes;
+
+  ServerTimeRes(
+    this.iso,
+    this.unixMs,
+    this.timezone,
+    this.timezoneOffsetMinutes,
+  );
+
+  factory ServerTimeRes.fromJson(Map<String, dynamic> json) =>
+      _$ServerTimeResFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ServerTimeResToJson(this);
+
+  static fromJsonModel(Map<String, dynamic> json) =>
+      ServerTimeRes.fromJson(json);
+}

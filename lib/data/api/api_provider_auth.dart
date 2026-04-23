@@ -40,4 +40,33 @@ class ApiProviderAuth extends ApiProviderBase {
       data: req.toJson(),
     ).then((response) => CommonMessage.fromJson(response.data ?? {}));
   }
+
+  Future<CommonMessage> forgotPassword(ForgotPasswordReq req) async {
+    return await ApiProviderBase.post<Map<String, dynamic>>(
+      MrSteamAPIs.forgotPassword,
+      data: req.toJson(),
+    ).then((response) {
+      final m = response.data ?? {};
+      return CommonMessage((m['message'] as String?) ?? '');
+    });
+  }
+
+  Future<VerifyOtpRes> verifyOtp(VerifyOtpReq req) async {
+    return await ApiProviderBase.post<Map<String, dynamic>>(
+      MrSteamAPIs.verifyOtp,
+      data: req.toJson(),
+    ).then((response) => VerifyOtpRes.fromJson(response.data ?? {}));
+  }
+
+  Future<CommonMessage> resetPasswordWithToken(
+    ResetPasswordWithResetTokenReq req,
+  ) async {
+    return await ApiProviderBase.post<Map<String, dynamic>>(
+      MrSteamAPIs.resetPasswordWithToken,
+      data: req.toJson(),
+    ).then((response) {
+      final m = response.data ?? {};
+      return CommonMessage((m['message'] as String?) ?? '');
+    });
+  }
 }
