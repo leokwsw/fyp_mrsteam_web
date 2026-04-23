@@ -1,160 +1,160 @@
 #!/bin/bash
 
-# FYP MrSteam Web 部署腳本
-# 此腳本用於將 Flutter Web 應用部署到 Google Cloud Platform
+# FYP MrSteam Web deployment script
+# This script deploys the Flutter Web app to Google Cloud Platform
 
-set -e  # 遇到錯誤時立即退出
+set -e  # Exit immediately on error
 
-# 顏色定義
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 函數：打印彩色訊息
+# Function: print colored messages
 print_message() {
     echo -e "${2}${1}${NC}"
 }
 
-# 檢查必要的工具
+# Check required tools
 check_requirements() {
-    print_message "檢查必要工具..." $BLUE
+    print_message "Checking required tools..." $BLUE
     
     if ! command -v gcloud &> /dev/null; then
-        print_message "錯誤：未找到 gcloud CLI。請安裝 Google Cloud SDK。" $RED
+        print_message "Error: gcloud CLI not found. Please install Google Cloud SDK." $RED
         exit 1
     fi
     
     if ! command -v docker &> /dev/null; then
-        print_message "錯誤：未找到 Docker。請安裝 Docker。" $RED
+        print_message "Error: Docker not found. Please install Docker." $RED
         exit 1
     fi
     
     if ! command -v flutter &> /dev/null; then
-        print_message "錯誤：未找到 Flutter。請安裝 Flutter SDK。" $RED
+        print_message "Error: Flutter not found. Please install Flutter SDK." $RED
         exit 1
     fi
     
-    print_message "✓ 所有必要工具已安裝" $GREEN
+    print_message "✓ All required tools are installed" $GREEN
 }
 
-# 設置 GCP 項目和配置變數
+# Set GCP project and config variables
 setup_project() {
-    # 首先嘗試從 gcloud 配置獲取當前項目
+    # First try to get current project from gcloud config
     if [ -z "$PROJECT_ID" ]; then
         PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
     fi
     
-    # 如果仍然沒有項目 ID，則提示用戶輸入
+    # If project ID is still missing, prompt user input
     if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ]; then
-        print_message "請輸入您的 GCP 項目 ID：" $YELLOW
+        print_message "Please enter your GCP project ID:" $YELLOW
         read -r PROJECT_ID
         
         if [ -z "$PROJECT_ID" ]; then
-            print_message "錯誤：必須提供項目 ID" $RED
+            print_message "Error: project ID is required" $RED
             exit 1
         fi
     fi
     
-    # 設置預設配置變數（可以通過環境變數覆蓋）
+    # Set default config variables (can be overridden by environment variables)
     SERVICE_NAME="${SERVICE_NAME:-fyp-mrsteam-web}"
     REGION="${REGION:-asia-east1}"
     
-    print_message "設置 GCP 項目：$PROJECT_ID" $BLUE
-    print_message "服務名稱：$SERVICE_NAME" $BLUE
-    print_message "部署區域：$REGION" $BLUE
+    print_message "Setting GCP project: $PROJECT_ID" $BLUE
+    print_message "Service name: $SERVICE_NAME" $BLUE
+    print_message "Deploy region: $REGION" $BLUE
     
     gcloud config set project "$PROJECT_ID"
     
-    # 啟用必要的 API
-    print_message "啟用必要的 GCP API..." $BLUE
+    # Enable required APIs
+    print_message "Enabling required GCP APIs..." $BLUE
     gcloud services enable cloudbuild.googleapis.com
     gcloud services enable run.googleapis.com
     gcloud services enable containerregistry.googleapis.com
 }
 
-# 構建和部署
+# Build and deploy
 build_and_deploy() {
-    print_message "開始構建和部署..." $BLUE
+    print_message "Starting build and deployment..." $BLUE
     
-    # 使用 Cloud Build 進行構建和部署
+    # Build and deploy using Cloud Build
     if gcloud builds submit --config=cloudbuild.yaml .; then
-        print_message "✓ 構建完成！" $GREEN
+        print_message "✓ Build completed!" $GREEN
     else
-        print_message "錯誤：構建失敗" $RED
+        print_message "Error: build failed" $RED
         exit 1
     fi
     
-    print_message "等待服務部署完成..." $YELLOW
-    sleep 10  # 等待服務完全部署
+    print_message "Waiting for service deployment..." $YELLOW
+    sleep 10  # Wait for deployment to complete
     
-    # 動態獲取服務 URL
-    print_message "獲取服務 URL..." $BLUE
+    # Dynamically fetch service URL
+    print_message "Fetching service URL..." $BLUE
     SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')
     
     if [ -n "$SERVICE_URL" ]; then
-        print_message "✓ 部署完成！" $GREEN
-        print_message "您的應用已部署到：$SERVICE_URL" $GREEN
+        print_message "✓ Deployment completed!" $GREEN
+        print_message "Your app is deployed at: $SERVICE_URL" $GREEN
         
-        # 將 URL 保存到文件以便後續使用
+        # Save URL to file for later use
         echo "$SERVICE_URL" > .deployment-url
-        print_message "服務 URL 已保存到 .deployment-url 文件" $BLUE
+        print_message "Service URL saved to .deployment-url" $BLUE
     else
-        print_message "警告：無法獲取服務 URL，請檢查服務是否正確部署" $YELLOW
-        print_message "您可以手動檢查：gcloud run services describe $SERVICE_NAME --region $REGION" $YELLOW
+        print_message "Warning: unable to fetch service URL, check deployment status" $YELLOW
+        print_message "You can check manually: gcloud run services describe $SERVICE_NAME --region $REGION" $YELLOW
     fi
 }
 
-# 本地測試
+# Local testing
 local_test() {
-    print_message "進行本地測試..." $BLUE
+    print_message "Running local test..." $BLUE
     
-    # 構建 Docker 映像
+    # Build Docker image
     docker build -t fyp-mrsteam-web-local .
     
-    print_message "啟動本地容器（端口 8080）..." $BLUE
+    print_message "Starting local container (port 8080)..." $BLUE
     docker run -p 8080:8080 fyp-mrsteam-web-local &
     
-    print_message "本地測試服務器已啟動：http://localhost:8080" $GREEN
-    print_message "按 Ctrl+C 停止服務器" $YELLOW
+    print_message "Local test server started: http://localhost:8080" $GREEN
+    print_message "Press Ctrl+C to stop the server" $YELLOW
 }
 
-# 獲取服務 URL
+# Get service URL
 get_service_url() {
-    # 設置預設配置變數（如果未設置）
+    # Set default config variables (if not set)
     SERVICE_NAME="${SERVICE_NAME:-fyp-mrsteam-web}"
     REGION="${REGION:-asia-east1}"
     
-    print_message "獲取服務 URL..." $BLUE
-    print_message "服務名稱：$SERVICE_NAME" $BLUE
-    print_message "區域：$REGION" $BLUE
+    print_message "Fetching service URL..." $BLUE
+    print_message "Service name: $SERVICE_NAME" $BLUE
+    print_message "Region: $REGION" $BLUE
     
     SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)' 2>/dev/null)
     
     if [ -n "$SERVICE_URL" ]; then
-        print_message "服務 URL：$SERVICE_URL" $GREEN
+        print_message "Service URL: $SERVICE_URL" $GREEN
         echo "$SERVICE_URL" > .deployment-url
-        print_message "URL 已保存到 .deployment-url 文件" $BLUE
+        print_message "URL saved to .deployment-url" $BLUE
     else
-        print_message "錯誤：無法找到服務或獲取 URL" $RED
-        print_message "請確認服務名稱和區域是否正確" $YELLOW
-        print_message "可用的服務列表：" $BLUE
+        print_message "Error: unable to find service or fetch URL" $RED
+        print_message "Please confirm service name and region are correct" $YELLOW
+        print_message "Available services:" $BLUE
         gcloud run services list --region=$REGION
         exit 1
     fi
 }
 
-# 清理資源
+# Clean resources
 cleanup() {
-    print_message "清理本地 Docker 映像..." $BLUE
+    print_message "Cleaning local Docker image..." $BLUE
     docker rmi fyp-mrsteam-web-local 2>/dev/null || true
-    print_message "✓ 清理完成" $GREEN
+    print_message "✓ Cleanup completed" $GREEN
 }
 
-# 主函數
+# Main function
 main() {
-    print_message "=== FYP MrSteam Web 部署工具 ===" $BLUE
+    print_message "=== FYP MrSteam Web Deployment Tool ===" $BLUE
     
     case "${1:-deploy}" in
         "test")
@@ -174,29 +174,29 @@ main() {
             cleanup
             ;;
         "help"|"-h"|"--help")
-            echo "使用方法："
-            echo "  $0 deploy   - 部署到 GCP（預設）"
-            echo "  $0 test     - 本地測試"
-            echo "  $0 url      - 獲取已部署服務的 URL"
-            echo "  $0 cleanup  - 清理本地資源"
-            echo "  $0 help     - 顯示此幫助訊息"
+            echo "Usage:"
+            echo "  $0 deploy   - Deploy to GCP (default)"
+            echo "  $0 test     - Local test"
+            echo "  $0 url      - Get deployed service URL"
+            echo "  $0 cleanup  - Clean local resources"
+            echo "  $0 help     - Show this help message"
             echo ""
-            echo "環境變數："
-            echo "  SERVICE_NAME - 服務名稱（預設：fyp-mrsteam-web）"
-            echo "  REGION       - 部署區域（預設：asia-east1）"
-            echo "  PROJECT_ID   - GCP 項目 ID"
+            echo "Environment variables:"
+            echo "  SERVICE_NAME - Service name (default: fyp-mrsteam-web)"
+            echo "  REGION       - Deploy region (default: asia-east1)"
+            echo "  PROJECT_ID   - GCP project ID"
             echo ""
-            echo "範例："
+            echo "Examples:"
             echo "  SERVICE_NAME=my-app REGION=us-central1 $0 deploy"
             echo "  SERVICE_NAME=my-app REGION=us-central1 $0 url"
             ;;
         *)
-            print_message "未知命令：$1" $RED
-            print_message "使用 '$0 help' 查看可用命令" $YELLOW
+            print_message "Unknown command: $1" $RED
+            print_message "Use '$0 help' to see available commands" $YELLOW
             exit 1
             ;;
     esac
 }
 
-# 執行主函數
+# Run main function
 main "$@"

@@ -23,19 +23,19 @@ class DioClient {
       ),
     );
 
-    // // Cache（可選）
+    // // Cache (optional)
     // dio.interceptors.add(
     //   DioCacheInterceptor(
     //     options: CacheOptions(
     //       store: MemCacheStore(),
-    //       policy: CachePolicy.request, // 預設不強制用 cache
+    //       policy: CachePolicy.request, // Default: do not force cache usage
     //       hitCacheOnErrorExcept: [401, 403],
     //       maxStale: const Duration(days: 7),
     //     ),
     //   ),
     // );
     //
-    // // 日誌
+    // // Logging
     // dio.interceptors.add(
     //   TalkerDioLogger(
     //     talker: talker ?? Talker(),

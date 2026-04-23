@@ -92,7 +92,7 @@ class ApiProviderUsers extends ApiProviderBase {
     ).then((response) => MessageRes.fromJson(response.data ?? {}));
   }
 
-  /// 需帶後端要求的 `x-force-reset-key` 標頭。
+  /// Must include the backend-required `x-force-reset-key` header.
   Future<MessageRes> forceResetPassword(
     String id,
     ResetPasswordReq req, {

@@ -52,7 +52,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
   List<SchoolRes> schools = [];
   List<UserResponse> tutors = [];
 
-  /// 統一的文件列表（包含已有文件和新上傳文件）
+  /// Unified file list (includes existing and newly uploaded files).
   List<CourseFileReq> uploadedFiles = [];
 
   CourseRes? existingCourse;
@@ -106,14 +106,14 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return null;
   }
 
-  /// 兼容不同 CourseRes 結構，盡可能抓到開始/結束時間
+  /// Compatible with different CourseRes structures; tries to extract start/end time.
   Map<String, DateTime?> _extractCourseDateTimes(CourseRes course) {
     DateTime? start;
     DateTime? end;
 
     final dynamic c = course;
 
-    // 1) 優先從 timestamps[0] 讀取
+    // 1) Prefer reading from timestamps[0].
     try {
       final timestamps = c.timestamps;
       if (timestamps is List && timestamps.isNotEmpty) {
@@ -132,7 +132,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
       }
     } catch (_) {}
 
-    // 2) 再嘗試 course 直接字段
+    // 2) Then try direct course fields.
     try {
       start ??= _parseAnyDateTime(c.startAt);
       start ??= _parseAnyDateTime(c.startTime);
@@ -205,7 +205,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
           selectedTutorId = null;
         }
 
-        // 直接使用後端 CourseFile 完整資料（url/path/originalName）
+        // Use complete backend CourseFile data directly (url/path/originalName).
         uploadedFiles = courseRes.files.map((f) {
           final name = f.originalName.isNotEmpty ? f.originalName : f.filename;
           return CourseFileReq(
@@ -229,7 +229,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     }
   }
 
-  /// 根據文件名猜測 MIME 類型
+  /// Guess MIME type based on file name.
   String _guessMimetype(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
     switch (ext) {
@@ -275,7 +275,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     };
   }
 
-  /// ✅ 日期/時間選擇器主題（白底 + 去紫 + disabled 灰色 + selected 描邊）
+  /// Date/time picker theme (white background + no purple + gray disabled + selected outline).
   ThemeData _whitePickerThemeAutoPrimary(BuildContext context) {
     final base = Theme.of(context);
 
@@ -309,24 +309,24 @@ class _EditClassScreenState extends State<EditClassScreen> {
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black26,
 
-        // 頂部白底，避免紫色
+        // White header background to avoid purple tint.
         headerBackgroundColor: surface,
         headerForegroundColor: onSurface,
 
         weekdayStyle: TextStyle(color: Colors.grey.shade700),
 
-        // 日期文字
+        // Day text
         dayForegroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) return disabled;
           return onSurface;
         }),
 
-        // 日期底色保持透明（不出現實心藍/紫圓）
+        // Keep day background transparent (no solid blue/purple circle).
         dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
           return Colors.transparent;
         }),
 
-        // 選中日期改成描邊
+        // Use outlined style for selected day.
         dayShape: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return CircleBorder(
@@ -336,14 +336,14 @@ class _EditClassScreenState extends State<EditClassScreen> {
           return const CircleBorder();
         }),
 
-        // today 與 selected 疊加時也保持可讀
+        // Keep text readable when today and selected overlap.
         todayForegroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) return disabled;
           return onSurface;
         }),
         todayBorder: BorderSide(color: primary, width: 1.2),
 
-        // 年份頁
+        // Year picker
         yearForegroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) return disabled;
           if (states.contains(WidgetState.selected)) return Colors.white;
@@ -382,7 +382,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return input;
   }
 
-  /// 上傳新文件
+  /// Upload new files.
   Future<void> _uploadFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -471,7 +471,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     }
   }
 
-  /// 刪除文件
+  /// Remove file.
   void _removeFile(int index) {
     final file = uploadedFiles[index];
     final fileName = file.originalName;
@@ -547,20 +547,20 @@ class _EditClassScreenState extends State<EditClassScreen> {
         ),
       );
     } else {
-      // New files can be removed immediately without confirmation
+      // New files can be removed immediately without confirmation.
       setState(() => uploadedFiles.removeAt(index));
     }
   }
 
-  /// 預覽/下載文件
+  /// Preview/download file.
   Future<void> _previewFile(CourseFileReq file) async {
-    // A) 優先使用 file.url（你已驗證這個可下載）
+    // A) Prefer file.url first (already verified downloadable).
     if (file.url.trim().isNotEmpty) {
       html.window.open(file.url, '_blank');
       return;
     }
 
-    // B) 沒有 url，就用 path
+    // B) If url is missing, use path.
     final path = file.path.trim();
     if (path.isEmpty) {
       _showError('File path not available');
@@ -591,7 +591,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     }
 
     try {
-      // C) 先試 signed-url
+      // C) Try signed-url first.
       final signedUrlRes = await _filesApi.getSignedUrl(path);
 
       if (mounted) {
@@ -604,7 +604,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
         return;
       }
 
-      // D) signed-url 空字串時 fallback 公開 URL
+      // D) If signed-url is empty, fallback to public URL.
       final fallback = _buildPublicFileUrl(path);
       html.window.open(fallback, '_blank');
     } catch (e) {
@@ -612,13 +612,13 @@ class _EditClassScreenState extends State<EditClassScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
 
-      // E) signed-url 失敗也 fallback 公開 URL
+      // E) If signed-url fails, fallback to public URL as well.
       final fallback = _buildPublicFileUrl(path);
       html.window.open(fallback, '_blank');
     }
   }
 
-  /// 格式化文件大小
+  /// Format file size.
   String _formatFileSize(int bytes) {
     if (bytes <= 0) return '';
     if (bytes < 1024) return '$bytes B';
@@ -626,7 +626,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  /// 根據文件類型返回圖標
+  /// Return icon based on file type.
   IconData _getFileIcon(String mimetype) {
     if (mimetype.contains('pdf')) return Icons.picture_as_pdf;
     if (mimetype.contains('word') || mimetype.contains('document')) {
@@ -642,7 +642,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return Icons.insert_drive_file;
   }
 
-  /// 獲取文件類型標籤
+  /// Get file type label.
   String _getFileExtLabel(String mimetype) {
     if (mimetype.contains('pdf')) return 'PDF';
     if (mimetype.contains('word') || mimetype.contains('document')) return 'DOC';
@@ -658,7 +658,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return 'FILE';
   }
 
-  /// 獲取文件類型對應的顏色
+  /// Get color based on file type.
   Color _getFileColor(String mimetype) {
     if (mimetype.contains('pdf')) return Colors.red;
     if (mimetype.contains('word') || mimetype.contains('document')) {
@@ -1540,7 +1540,7 @@ class _EditClassScreenState extends State<EditClassScreen> {
             final firstDate = DateTime(2000, 1, 1);
             final lastDate = DateTime(2100, 12, 31);
 
-            // 編輯頁允許載入和選擇歷史日期
+            // Edit page allows loading and selecting historical dates.
             DateTime initialDate = now;
             if (label.contains('Start') && startDateTime != null) {
               initialDate = startDateTime!;

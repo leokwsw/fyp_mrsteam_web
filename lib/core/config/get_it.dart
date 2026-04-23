@@ -45,11 +45,11 @@ Future<void> initGetIt() async {
 
   // sl.registerFactory(() => RegisterUseCase(sl<AuthRepository>()));
   //
-  // // Blocs / Cubits（工廠，確保每次要新實例）
+  // // Blocs / Cubits (factory, ensure new instance each time)
   // sl.registerFactory(() => LoginBloc(sl<LoginUseCase>()));
   // sl.registerFactory(() => RegisterBloc(sl<RegisterUseCase>()));
   //
-  // // 需要 async 初始（例如 SharedPreferences、HydratedStorage）
+  // // Requires async initialization (e.g., SharedPreferences, HydratedStorage)
   // sl.registerSingletonAsync<SharedPreferences>(() async => await SharedPreferences.getInstance());
-  await getIt.allReady(); // 等待所有 async 服務 ready
+  await getIt.allReady(); // Wait until all async services are ready
 }

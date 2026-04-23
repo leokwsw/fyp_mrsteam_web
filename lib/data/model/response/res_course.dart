@@ -162,7 +162,7 @@ class CourseListRes {
       CourseListRes.fromJson(json);
 }
 
-/// 課程文件響應
+/// Course files response.
 @JsonSerializable()
 class CourseFilesRes {
   final String courseId;

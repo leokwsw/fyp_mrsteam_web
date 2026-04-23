@@ -38,10 +38,10 @@ class AttendanceRes {
     this.updatedAt,
   });
 
-  /// 相容舊版 `checked` 欄位（有簽到且已抵達／遲到）
+  /// Backward-compatible `checked` field (checked in and arrived/late).
   bool get checked => status == 'arrived' || status == 'late';
 
-  /// 相容舊版 `checkInTime` 欄位名
+  /// Backward-compatible `checkInTime` field name.
   String? get checkInTime => arrivedTime;
 
   static Object? _readStatus(Map<dynamic, dynamic> json, String key) {

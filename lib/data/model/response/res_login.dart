@@ -33,7 +33,7 @@ class LoginRes {
   static fromJsonModel(Map<String, dynamic> json) => LoginRes.fromJson(json);
 }
 
-/// 對應 OTP 驗證後回傳（常見為 `resetToken`）
+/// Response returned after OTP verification (usually `resetToken`).
 @JsonSerializable()
 class VerifyOtpRes {
   @JsonKey(readValue: VerifyOtpRes._readResetToken)
