@@ -1,101 +1,125 @@
-# FYP MrSteam Web 應用
+# FYP MrSteam Web
 
-這是一個使用 Flutter 開發的 Web 應用，專為 FYP MrSteam 項目設計。
+A Flutter Web application built for the FYP MrSteam project.
 
-## 功能特色
+## Live app
 
-- 響應式 Web 設計
-- 使用 Flutter Web 技術
-- 整合 Firebase 服務
-- 支援多種 UI 組件和功能
+**Web:** [https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app](https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app)
 
-## 技術棧
+Open the link in a modern desktop or mobile browser (Chrome recommended).
 
-- **前端框架**: Flutter Web
-- **狀態管理**: Flutter Bloc
-- **網路請求**: Dio
-- **UI 組件**: Material Design
-- **路由**: Go Router
-- **國際化**: Intl
-- **快取**: Cached Network Image
+## Features
 
-## 開發環境設置
+- Responsive web layout
+- Flutter Web
+- Firebase integration
+- Material Design UI
 
-### 前置需求
+## Tech stack
 
-- Flutter SDK (>=3.35.0)
-- Dart SDK (>=3.9.2)
-- Web 瀏覽器（Chrome 推薦）
+Direct dependencies and tooling from [`pubspec.yaml`](pubspec.yaml). Runtime targets **Flutter Web** with Dart `>=3.9.2 <4.0.0` and Flutter `>=3.35.0 <4.0.0`.
 
-### 安裝步驟
+### Core & UI
 
-1. 克隆專案
-```bash
-git clone <repository-url>
-cd fyp_mrsteam_web
-```
+- **flutter** (SDK) — **Material** (`uses-material-design`) — **cupertino_icons**
+- **google_fonts** — **cached_network_image** — **image_network**
+- **flutter_html** — **flutter_form_builder** — **table_calendar**
 
-2. 安裝依賴
+### State & architecture
+
+- **bloc** — **flutter_bloc** — **bloc_concurrency** — **bloc_test**
+- **get_it**
+
+### Networking & serialization
+
+- **dio** — **retry** — **talker** — **talker_dio_logger**
+- **json_annotation** (codegen via **json_serializable** / **build_runner** in `dev_dependencies`)
+
+### Firebase
+
+- **firebase_core** — **firebase_messaging** — **firebase_crashlytics**
+
+### Maps & location
+
+- **flutter_map** — **latlong2** — **flutter_map_cancellable_tile_provider**
+- **google_maps_flutter** — **geolocator**
+
+### Navigation & deep links
+
+- **go_router** — **app_links**
+
+### Storage, files & device
+
+- **path** — **path_provider** — **shared_preferences**
+- **image_picker** — **file_picker** — **excel**
+- **permission_handler** — **device_info_plus** — **package_info_plus** — **connectivity_plus**
+
+### Internationalization
+
+- **intl**
+
+### Development (`dev_dependencies`)
+
+- **flutter_test** — **build_runner** — **json_serializable** — **flutter_lints**
+
+## Local development
+
+### Requirements
+
+- Flutter SDK (>= 3.35.0)
+- Dart SDK (>= 3.9.2)
+- Chrome (or another supported browser)
+
+### Setup
+
+From the project root:
+
 ```bash
 flutter pub get
-```
-
-3. 運行開發服務器
-```bash
 flutter run -d chrome
 ```
 
-## 部署到 Google Cloud Platform
+### Production build
 
-### 前置需求
+```bash
+flutter build web --release --web-renderer canvaskit
+```
+
+### Code quality
+
+- `flutter analyze` — static analysis
+- `flutter test` — tests
+
+## Deploying to Google Cloud (Cloud Run)
+
+### Requirements
 
 - Google Cloud SDK
 - Docker
-- 已啟用的 GCP 專案
+- A GCP project with billing and APIs enabled
 
-### 快速部署
-
-使用提供的部署腳本：
+### Using the deploy script
 
 ```bash
-# 部署到 GCP
-./deploy.sh deploy
-
-# 本地測試
-./deploy.sh test
-
-# 清理本地資源
-./deploy.sh cleanup
+./deploy.sh deploy   # deploy
+./deploy.sh test     # local test
+./deploy.sh cleanup  # clean local resources
 ```
 
-### 手動部署步驟
+### Manual GCP setup (summary)
 
-1. **設置 GCP 專案**
-```bash
-# 設置專案 ID
-export PROJECT_ID=your-project-id
-gcloud config set project $PROJECT_ID
+1. Set project and enable APIs: `cloudbuild.googleapis.com`, `run.googleapis.com`, `containerregistry.googleapis.com`.
+2. Build and deploy, for example:
 
-# 啟用必要的 API
-gcloud services enable cloudbuild.googleapis.com
-gcloud services enable run.googleapis.com
-gcloud services enable containerregistry.googleapis.com
-```
-
-2. **使用 Cloud Build 部署**
 ```bash
 gcloud builds submit --config=cloudbuild.yaml .
 ```
 
-3. **或手動構建和部署**
+Or build/push the image and run:
+
 ```bash
-# 構建 Docker 映像
 docker build -t gcr.io/$PROJECT_ID/fyp-mrsteam-web .
-
-# 推送到 Container Registry
 docker push gcr.io/$PROJECT_ID/fyp-mrsteam-web
-
-# 部署到 Cloud Run
 gcloud run deploy fyp-mrsteam-web \
   --image gcr.io/$PROJECT_ID/fyp-mrsteam-web \
   --region asia-east1 \
@@ -104,102 +128,63 @@ gcloud run deploy fyp-mrsteam-web \
   --port 8080
 ```
 
-### 部署配置
+### Typical Cloud Run settings
 
-- **地區**: asia-east1（香港）
-- **平台**: Cloud Run（完全託管）
-- **記憶體**: 512Mi
-- **CPU**: 1 vCPU
-- **最大實例數**: 10
-- **最小實例數**: 0（自動縮放到零）
+- **Region:** `asia-east1`
+- **Platform:** Cloud Run (fully managed)
+- **Memory:** 512Mi
+- **CPU:** 1 vCPU
+- **Scaling:** min 0, max 10 instances
 
-## 專案結構
-
-```
-fyp_mrsteam_web/
-├── lib/                    # Dart 源代碼
-│   └── main.dart          # 應用入口點
-├── web/                   # Web 資源
-│   ├── index.html         # HTML 模板
-│   ├── manifest.json      # PWA 清單
-│   └── icons/             # 應用圖標
-├── test/                  # 測試文件
-├── Dockerfile             # Docker 配置
-├── nginx.conf             # Nginx 配置
-├── cloudbuild.yaml        # Cloud Build 配置
-├── deploy.sh              # 部署腳本
-└── pubspec.yaml           # Flutter 依賴配置
-```
-
-## 開發指南
-
-### 構建生產版本
+### Local Docker
 
 ```bash
-flutter build web --release --web-renderer canvaskit
-```
-
-### 本地 Docker 測試
-
-```bash
-# 構建映像
 docker build -t fyp-mrsteam-web .
-
-# 運行容器
 docker run -p 8080:8080 fyp-mrsteam-web
 ```
 
-### 代碼品質
+## Environment variables (deploy)
 
-- 使用 `flutter analyze` 進行靜態分析
-- 使用 `flutter test` 運行測試
-- 遵循 Flutter 編碼規範
+- `PROJECT_ID` — GCP project ID
+- `REGION` — deploy region (default: `asia-east1`)
 
-## 環境變數
+## Project layout
 
-部署時可以設置以下環境變數：
+```
+fyp_mrsteam_web/
+├── lib/                 # Dart sources
+│   └── main.dart        # Entry point
+├── web/                 # Web assets (index.html, manifest, icons)
+├── test/
+├── Dockerfile
+├── nginx.conf
+├── cloudbuild.yaml
+├── deploy.sh
+└── pubspec.yaml
+```
 
-- `PROJECT_ID`: GCP 專案 ID
-- `REGION`: 部署地區（預設：asia-east1）
+## Troubleshooting
 
-## 故障排除
+- **Build fails:** Match Flutter/Dart versions to `pubspec.yaml`; run `flutter pub get`.
+- **Deploy fails:** Check IAM, APIs, and `gcloud` project configuration.
+- **Runtime issues:** Use the browser devtools console; confirm network access.
 
-### 常見問題
-
-1. **構建失敗**
-   - 檢查 Flutter 版本是否符合要求
-   - 確認所有依賴都已正確安裝
-
-2. **部署失敗**
-   - 檢查 GCP 權限設置
-   - 確認已啟用必要的 API
-
-3. **運行時錯誤**
-   - 檢查瀏覽器控制台錯誤
-   - 確認網路連接正常
-
-### 日誌查看
+**Cloud Run logs:**
 
 ```bash
-# 查看 Cloud Run 日誌
 gcloud logs read --service=fyp-mrsteam-web --region=asia-east1
+```
 
-# 查看 Cloud Build 日誌
+**Cloud Build logs:**
+
+```bash
 gcloud builds log <BUILD_ID>
 ```
 
-## 貢獻指南
+## License
 
-1. Fork 專案
-2. 創建功能分支
-3. 提交更改
-4. 推送到分支
-5. 創建 Pull Request
+This project is for FYP (academic) use.
 
-## 授權
+## Contact
 
-此專案為 FYP 學術用途。
-
-## 聯絡方式
-
-如有問題或建議，請聯絡開發團隊。
+For questions or feedback, contact the project team.
