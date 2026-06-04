@@ -4,7 +4,9 @@ A Flutter Web application built for the FYP MrSteam project.
 
 ## Live app
 
-**Web:** [https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app](https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app)
+~~**Web:** [https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app](https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app)~~
+
+**Web services are migrating**
 
 Open the link in a modern desktop or mobile browser (Chrome recommended).
 
