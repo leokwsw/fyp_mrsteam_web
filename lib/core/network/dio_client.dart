@@ -8,7 +8,7 @@ class DioClient {
   DioClient._();
 
   static Dio build({Talker? talker}) {
-    final baseUrl = 'https://fyp-backend-zknqk6dfca-de.a.run.app';
+    final baseUrl = 'https://api-mu2526-fyp.leonardpark.dev';
 
     final dio = Dio(
       BaseOptions(

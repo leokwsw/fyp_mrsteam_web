@@ -23,13 +23,10 @@ class PlaceSearchResult {
 }
 
 class PlacesSearchService {
-  static const String _apiKey = 'AIzaSyAbS02DKq5kL1nN5cNIHBtluCrvSGr633c';
+  static const String _photonBaseUrl = 'https://photon.komoot.io';
+  final Map<String, PlaceSearchResult> _resultCache = {};
 
-  String _sessionToken = '';
-
-  void startNewSession() {
-    _sessionToken = DateTime.now().microsecondsSinceEpoch.toString();
-  }
+  void startNewSession() => _resultCache.clear();
 
   Future<List<PlaceSearchResult>> searchPlaces(
     String query, {
@@ -40,129 +37,53 @@ class PlacesSearchService {
     final q = query.trim();
     if (q.isEmpty) return [];
 
-    if (_sessionToken.isEmpty) {
-      startNewSession();
-    }
-
-    final uri = Uri.parse('https://places.googleapis.com/v1/places:autocomplete');
-
-    final Map<String, dynamic> body = {
-      'input': q,
-      'sessionToken': _sessionToken,
-      'languageCode': 'en-US',
-      'regionCode': 'HK',
-      if (countryCode != null) 'includedRegionCodes': [countryCode.toUpperCase()],
-      if (nearLat != null && nearLng != null)
-        'locationBias': {
-          'circle': {
-            'center': {'latitude': nearLat, 'longitude': nearLng},
-            'radius': 30000.0,
-          }
-        },
+    final queryParameters = <String, String>{
+      'q': q,
+      'limit': '8',
+      'lang': 'en',
+      if (nearLat != null) 'lat': nearLat.toString(),
+      if (nearLng != null) 'lon': nearLng.toString(),
+      if (countryCode != null && countryCode.toLowerCase() == 'hk')
+        'bbox': '113.825,22.140,114.440,22.571',
     };
+    final uri = Uri.parse('$_photonBaseUrl/api')
+        .replace(queryParameters: queryParameters);
+    try {
+      final res = await http.get(uri);
+      if (res.statusCode != 200) {
+        debugPrint('[PhotonSearch] ${res.statusCode} ${res.body}');
+        return [];
+      }
 
-    final res = await http.post(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask':
-            'suggestions.placePrediction.placeId,'
-            'suggestions.placePrediction.text.text,'
-            'suggestions.placePrediction.structuredFormat.mainText.text,'
-            'suggestions.placePrediction.structuredFormat.secondaryText.text,'
-            'suggestions.placePrediction.types',
-      },
-      body: jsonEncode(body),
-    );
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final features = (body['features'] as List?) ?? const [];
+      final results = features
+          .map((item) => _resultFromFeature(item as Map<String, dynamic>))
+          .whereType<PlaceSearchResult>()
+          .toList();
 
-    if (res.statusCode != 200) {
-      print('[PlacesAutocomplete] ${res.statusCode} ${res.body}');
+      _resultCache.addEntries(
+        results.map((result) => MapEntry(result.placeId, result)),
+      );
+      return results;
+    } catch (e) {
+      debugPrint('[PhotonSearch] Exception: $e');
       return [];
     }
-
-    final map = jsonDecode(res.body) as Map<String, dynamic>;
-    final suggestions = (map['suggestions'] as List?) ?? [];
-
-    return suggestions.map((s) {
-      final p = (s as Map<String, dynamic>)['placePrediction'] as Map<String, dynamic>;
-
-      final placeId = (p['placeId'] ?? '').toString();
-      final mainText = (((p['structuredFormat'] ?? {})['mainText'] ?? {})['text'] ?? '')
-          .toString();
-      final secondaryText =
-          (((p['structuredFormat'] ?? {})['secondaryText'] ?? {})['text'] ?? '')
-              .toString();
-      final fullText = (((p['text'] ?? {})['text']) ?? '').toString();
-      final types = (p['types'] as List?)?.map((e) => e.toString()).toList() ?? const [];
-
-      return PlaceSearchResult(
-        placeId: placeId,
-        shortName: mainText.isNotEmpty ? mainText : fullText,
-        displayName: secondaryText.isNotEmpty
-            ? '$mainText, $secondaryText'
-            : (fullText.isNotEmpty ? fullText : mainText),
-        type: types.isNotEmpty ? types.first : '',
-      );
-    }).where((e) => e.placeId.isNotEmpty).toList();
   }
 
   Future<PlaceSearchResult?> getPlaceDetails(String placeId) async {
-    if (placeId.isEmpty) return null;
-
-    final uri = Uri.parse('https://places.googleapis.com/v1/places/$placeId');
-
-    final res = await http.get(
-      uri,
-      headers: {
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask':
-            'id,displayName,formattedAddress,location,types,addressComponents',
-      },
-    );
-
-    if (res.statusCode != 200) {
-      print('[PlaceDetails] ${res.statusCode} ${res.body}');
-      return null;
-    }
-
-    final m = jsonDecode(res.body) as Map<String, dynamic>;
-    final loc = (m['location'] ?? {}) as Map<String, dynamic>;
-    final lat = (loc['latitude'] as num?)?.toDouble();
-    final lng = (loc['longitude'] as num?)?.toDouble();
-
-    String? street;
-    final comps = (m['addressComponents'] as List?) ?? [];
-    for (final c in comps) {
-      final cc = c as Map<String, dynamic>;
-      final types = (cc['types'] as List?)?.map((e) => e.toString()).toList() ?? [];
-      if (types.contains('route')) {
-        street = (cc['longText'] ?? cc['shortText'] ?? '').toString().trim();
-        break;
-      }
-    }
-
-    final name = ((m['displayName'] ?? {})['text'] ?? '').toString();
-    final formatted = (m['formattedAddress'] ?? '').toString();
-    final types = (m['types'] as List?)?.map((e) => e.toString()).toList() ?? const [];
-
-    return PlaceSearchResult(
-      placeId: (m['id'] ?? placeId).toString(),
-      shortName: name,
-      displayName: formatted,
-      lat: lat,
-      lng: lng,
-      type: types.isNotEmpty ? types.first : '',
-      streetName: street,
-    );
+    return _resultCache[placeId];
   }
 
   Future<String?> reverseGeocode(double lat, double lng) async {
-    final uri = Uri.parse(
-      'https://maps.googleapis.com/maps/api/geocode/json'
-      '?latlng=$lat,$lng'
-      '&key=$_apiKey'
-      '&language=en-US',
+    final uri = Uri.parse('$_photonBaseUrl/reverse').replace(
+      queryParameters: {
+        'lat': lat.toString(),
+        'lon': lng.toString(),
+        'limit': '1',
+        'lang': 'en',
+      },
     );
 
     try {
@@ -173,25 +94,56 @@ class PlacesSearchService {
         return null;
       }
 
-      final m = jsonDecode(res.body) as Map<String, dynamic>;
-      final status = m['status'] as String?;
-      debugPrint('[ReverseGeocode] Google status: $status');
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final features = (body['features'] as List?) ?? const [];
+      if (features.isEmpty) return null;
 
-      if (status != 'OK') {
-        debugPrint('[ReverseGeocode] Error: ${m['error_message'] ?? status}');
-        return null;
-      }
-
-      final results = (m['results'] as List?) ?? [];
-      if (results.isEmpty) return null;
-
-      final address =
-          (results.first as Map<String, dynamic>)['formatted_address']?.toString();
+      final result = _resultFromFeature(
+        features.first as Map<String, dynamic>,
+      );
+      final address = result?.displayName;
       debugPrint('[ReverseGeocode] Address: $address');
       return address;
     } catch (e) {
       debugPrint('[ReverseGeocode] Exception: $e');
       return null;
     }
+  }
+
+  PlaceSearchResult? _resultFromFeature(Map<String, dynamic> feature) {
+    final properties =
+        (feature['properties'] as Map<String, dynamic>?) ?? const {};
+    final geometry = (feature['geometry'] as Map<String, dynamic>?) ?? const {};
+    final coordinates = (geometry['coordinates'] as List?) ?? const [];
+    if (coordinates.length < 2) return null;
+
+    final name = (properties['name'] ?? properties['street'] ?? '').toString();
+    final street = properties['street']?.toString();
+    final addressParts = <String>[
+      if (name.isNotEmpty) name,
+      if (street != null && street.isNotEmpty && street != name) street,
+      if (properties['housenumber'] != null)
+        properties['housenumber'].toString(),
+      if (properties['district'] != null) properties['district'].toString(),
+      if (properties['city'] != null) properties['city'].toString(),
+      if (properties['state'] != null) properties['state'].toString(),
+      if (properties['country'] != null) properties['country'].toString(),
+    ];
+    final osmType = (properties['osm_type'] ?? '').toString();
+    final osmId = (properties['osm_id'] ?? '').toString();
+    final placeId = '$osmType$osmId';
+    if (placeId.isEmpty) return null;
+
+    return PlaceSearchResult(
+      placeId: placeId,
+      shortName: name.isNotEmpty
+          ? name
+          : (addressParts.isNotEmpty ? addressParts.first : ''),
+      displayName: addressParts.toSet().join(', '),
+      lat: (coordinates[1] as num?)?.toDouble(),
+      lng: (coordinates[0] as num?)?.toDouble(),
+      type: (properties['osm_value'] ?? '').toString(),
+      streetName: street,
+    );
   }
 }

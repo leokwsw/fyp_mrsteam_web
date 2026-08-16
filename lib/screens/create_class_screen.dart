@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 import '../constants/colors.dart';
@@ -1635,12 +1636,12 @@ class MapPickerDialog extends StatefulWidget {
 
 class _MapPickerDialogState extends State<MapPickerDialog> {
   LatLng? _selectedLocation;
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
+  bool _isMapReady = false;
   bool _isLoadingLocation = true;
   String? _locationError;
   String? _selectedAddress;
   String? _selectedStreet;
-  Set<Marker> _markers = {};
 
   static const LatLng _defaultLocation = LatLng(22.3193, 114.1694); // HK
 
@@ -1657,7 +1658,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     super.initState();
     if (widget.initialLat != null && widget.initialLng != null) {
       _selectedLocation = LatLng(widget.initialLat!, widget.initialLng!);
-      _updateMarker(_selectedLocation!);
       _isLoadingLocation = false;
       _reverseGeocode(_selectedLocation!);
     } else {
@@ -1669,7 +1669,12 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   void dispose() {
     _debounceTimer?.cancel();
     _searchController.dispose();
+    _mapController.dispose();
     super.dispose();
+  }
+
+  void _moveMap(LatLng location, double zoom) {
+    if (_isMapReady) _mapController.move(location, zoom);
   }
 
   Future<void> _getCurrentLocation() async {
@@ -1716,9 +1721,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         _isLoadingLocation = false;
         _locationError = null;
       });
-      _updateMarker(loc);
       _reverseGeocode(loc);
-      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 15));
+      _moveMap(loc, 15);
     } catch (e) {
       if (!mounted) return;
       _fallbackLocation(
@@ -1734,23 +1738,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       _selectedLocation = _defaultLocation;
       _isLoadingLocation = false;
     });
-    _updateMarker(_defaultLocation);
     _reverseGeocode(_defaultLocation);
   }
 
   LatLng get _mapCenter => _selectedLocation ?? _defaultLocation;
-
-  void _updateMarker(LatLng pos) {
-    _markers
-      ..clear()
-      ..add(
-        Marker(
-          markerId: const MarkerId('selected'),
-          position: pos,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      );
-  }
 
   void _onSearchChanged(String query) {
     _debounceTimer?.cancel();
@@ -1833,8 +1824,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       _searchResults = [];
     });
 
-    _updateMarker(loc);
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(loc, 17));
+    _moveMap(loc, 17);
   }
 
   Future<void> _reverseGeocode(LatLng location) async {
@@ -1871,7 +1861,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
       _selectedStreet = null;
       _showSearchResults = false;
     });
-    _updateMarker(latLng);
     _reverseGeocode(latLng);
   }
 
@@ -2128,7 +2117,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                 _isLoadingLocation = false;
                 _locationError = 'Skipped location detection';
               });
-              _updateMarker(_defaultLocation);
               _reverseGeocode(_defaultLocation);
             },
             child: const Text('Skip and use default location'),
@@ -2288,14 +2276,44 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   Widget _buildMap() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: GoogleMap(
-        onMapCreated: (controller) => _mapController = controller,
-        initialCameraPosition: CameraPosition(target: _mapCenter, zoom: 15),
-        markers: _markers,
-        onTap: _onMapTap,
-        zoomControlsEnabled: true,
-        mapToolbarEnabled: true,
-        compassEnabled: true,
+      child: FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: _mapCenter,
+          initialZoom: 15,
+          onMapReady: () {
+            _isMapReady = true;
+            _mapController.move(_mapCenter, 15);
+          },
+          onTap: (_, point) => _onMapTap(point),
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.example.fyp_mrsteam_web',
+          ),
+          if (_selectedLocation != null)
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: _selectedLocation!,
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.topCenter,
+                  child: const Icon(
+                    Icons.location_pin,
+                    color: Colors.red,
+                    size: 48,
+                  ),
+                ),
+              ],
+            ),
+          RichAttributionWidget(
+            attributions: [
+              TextSourceAttribution('OpenStreetMap contributors'),
+            ],
+          ),
+        ],
       ),
     );
   }
