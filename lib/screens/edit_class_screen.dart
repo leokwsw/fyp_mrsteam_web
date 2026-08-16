@@ -258,11 +258,6 @@ class _EditClassScreenState extends State<EditClassScreen> {
     return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  String _buildPublicFileUrl(String path) {
-    final encodedPath = Uri.encodeFull(path.trim());
-    return 'https://storage.googleapis.com/fyp-uploads/$encodedPath';
-  }
-
   /// Build Content-Disposition headers for UTF-8/Chinese filename support (RFC 5987)
   Map<String, List<String>> _utf8FilenameHeaders(String filename) {
     final ext = path.extension(filename);
@@ -604,17 +599,12 @@ class _EditClassScreenState extends State<EditClassScreen> {
         return;
       }
 
-      // D) If signed-url is empty, fallback to public URL.
-      final fallback = _buildPublicFileUrl(path);
-      html.window.open(fallback, '_blank');
+      _showError('File link not available');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
-
-      // E) If signed-url fails, fallback to public URL as well.
-      final fallback = _buildPublicFileUrl(path);
-      html.window.open(fallback, '_blank');
+      _showError('Unable to open file. Please try again.');
     }
   }
 

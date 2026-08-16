@@ -1,5 +1,5 @@
 class MrSteamAPIs {
-  static const String baseUrl = 'https://fyp-backend-zknqk6dfca-de.a.run.app';
+  static const String baseUrl = 'https://api-mu2526-fyp.leonardpark.dev';
   static const String v1 = '/api/v1';
 
   // Auth

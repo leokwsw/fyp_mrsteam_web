@@ -4,7 +4,11 @@ A Flutter Web application built for the FYP MrSteam project.
 
 ## Live app
 
-**Web:** [https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app](https://fyp-mrsteam-web-zknqk6dfca-de.a.run.app)
+**Web:** [https://web-mu2526-fyp.leonardpark.dev](https://web-mu2526-fyp.leonardpark.dev)
+
+**API:** [https://api-mu2526-fyp.leonardpark.dev](https://api-mu2526-fyp.leonardpark.dev)
+
+**API documentation:** [https://api-mu2526-fyp.leonardpark.dev/api/docs](https://api-mu2526-fyp.leonardpark.dev/api/docs)
 
 Open the link in a modern desktop or mobile browser (Chrome recommended).
 
@@ -42,7 +46,7 @@ Direct dependencies and tooling from [`pubspec.yaml`](pubspec.yaml). Runtime tar
 ### Maps & location
 
 - **flutter_map** — **latlong2** — **flutter_map_cancellable_tile_provider**
-- **google_maps_flutter** — **geolocator**
+- **geolocator**
 
 ### Navigation & deep links
 
@@ -90,63 +94,74 @@ flutter build web --release --web-renderer canvaskit
 - `flutter analyze` — static analysis
 - `flutter test` — tests
 
-## Deploying to Google Cloud (Cloud Run)
+## Deploying on Ubuntu with PM2
 
 ### Requirements
 
-- Google Cloud SDK
-- Docker
-- A GCP project with billing and APIs enabled
+- Flutter SDK (>= 3.35.0)
+- Node.js
+- PM2 (`npm install --global pm2`)
+- Nginx
 
 ### Using the deploy script
 
 ```bash
-./deploy.sh deploy   # deploy
-./deploy.sh test     # local test
-./deploy.sh cleanup  # clean local resources
+./deploy.sh deploy
 ```
 
-### Manual GCP setup (summary)
+The script installs Flutter dependencies, creates a release build, starts or
+reloads the app from `ecosystem.config.js`, and saves the PM2 process list.
 
-1. Set project and enable APIs: `cloudbuild.googleapis.com`, `run.googleapis.com`, `containerregistry.googleapis.com`.
-2. Build and deploy, for example:
+### Manual deployment
 
 ```bash
-gcloud builds submit --config=cloudbuild.yaml .
+flutter pub get
+flutter build web --release
+pm2 startOrReload ecosystem.config.js --update-env
+pm2 save
 ```
 
-Or build/push the image and run:
+The app listens on port `8070` by default. Set `PORT` before starting PM2 to
+override it:
 
 ```bash
-docker build -t gcr.io/$PROJECT_ID/fyp-mrsteam-web .
-docker push gcr.io/$PROJECT_ID/fyp-mrsteam-web
-gcloud run deploy fyp-mrsteam-web \
-  --image gcr.io/$PROJECT_ID/fyp-mrsteam-web \
-  --region asia-east1 \
-  --platform managed \
-  --allow-unauthenticated \
-  --port 8080
+PORT=3000 ./deploy.sh deploy
 ```
 
-### Typical Cloud Run settings
-
-- **Region:** `asia-east1`
-- **Platform:** Cloud Run (fully managed)
-- **Memory:** 512Mi
-- **CPU:** 1 vCPU
-- **Scaling:** min 0, max 10 instances
-
-### Local Docker
+### Process management
 
 ```bash
-docker build -t fyp-mrsteam-web .
-docker run -p 8080:8080 fyp-mrsteam-web
+./deploy.sh status
+./deploy.sh logs
+./deploy.sh restart
+./deploy.sh stop
 ```
 
-## Environment variables (deploy)
+To restore the saved process list after a server reboot, configure PM2 startup
+once by running `pm2 startup` and following the command it prints.
 
-- `PROJECT_ID` — GCP project ID
-- `REGION` — deploy region (default: `asia-east1`)
+### Nginx reverse proxy
+
+Proxy the public web domain to the PM2 static server:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name web.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8070;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Replace `web.example.com` with the production web domain, validate the Nginx
+configuration with `sudo nginx -t`, and then reload Nginx.
 
 ## Project layout
 
@@ -156,9 +171,7 @@ fyp_mrsteam_web/
 │   └── main.dart        # Entry point
 ├── web/                 # Web assets (index.html, manifest, icons)
 ├── test/
-├── Dockerfile
-├── nginx.conf
-├── cloudbuild.yaml
+├── ecosystem.config.js  # PM2 process and static server configuration
 ├── deploy.sh
 └── pubspec.yaml
 ```
@@ -166,19 +179,13 @@ fyp_mrsteam_web/
 ## Troubleshooting
 
 - **Build fails:** Match Flutter/Dart versions to `pubspec.yaml`; run `flutter pub get`.
-- **Deploy fails:** Check IAM, APIs, and `gcloud` project configuration.
+- **Deploy fails:** Confirm that Flutter and PM2 are available in `PATH`.
 - **Runtime issues:** Use the browser devtools console; confirm network access.
 
-**Cloud Run logs:**
+**PM2 logs:**
 
 ```bash
-gcloud logs read --service=fyp-mrsteam-web --region=asia-east1
-```
-
-**Cloud Build logs:**
-
-```bash
-gcloud builds log <BUILD_ID>
+pm2 logs fyp-mrsteam-web
 ```
 
 ## License
